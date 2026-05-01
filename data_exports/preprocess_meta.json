@@ -1,0 +1,49 @@
+{
+    "base_features": [
+        "yil",
+        "kilometre",
+        "motor_hacmi_num",
+        "motor_gucu_num",
+        "arac_yasi",
+        "tramer_tutari",
+        "hasar_skoru",
+        "orijinal_sayi",
+        "boyali_sayi",
+        "degismis_sayi",
+        "lokal_boyali_sayi",
+        "belirtilmemis_sayi",
+        "marka_enc",
+        "seri_enc",
+        "model_enc",
+        "vites_tipi_enc",
+        "yakit_tipi_enc",
+        "kasa_tipi_enc",
+        "renk_enc",
+        "cekis_enc",
+        "kimden_enc",
+        "il_enc"
+    ],
+    "cat_cols": [
+        "marka",
+        "seri",
+        "model",
+        "vites_tipi",
+        "yakit_tipi",
+        "kasa_tipi",
+        "renk",
+        "cekis",
+        "kimden",
+        "il"
+    ],
+    "guven_esik": 70,
+    "ham_satilmis_kayit": 142142,
+    "aktif_ilan_kayit": 180031,
+    "processed_kayit": 141311,
+    "guvenli_kayit": 68778,
+    "final_clean_kayit": 61388,
+    "excluded_segments": [
+        "SUV",
+        "Pick-up",
+        "Mercedes"
+    ]
+}
