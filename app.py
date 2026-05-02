@@ -355,6 +355,8 @@ def render_car_svg(parca_durumlari):
     """Tıklanabilir SVG — JavaScript ile state yönetimi."""
     import json
     durumlar_json = json.dumps(parca_durumlari)
+    # Her state değişikliğinde version değişir → localStorage cache invalidate
+    version = str(hash(durumlar_json))   # ← YENİ SATIR
 
     html = """
     <!DOCTYPE html>
@@ -477,12 +479,22 @@ def render_car_svg(parca_durumlari):
       const CYCLE = ["orijinal", "lokal_boyali", "boyali", "degismis"];
 
       // localStorage'dan oku, yoksa Python'dan geleni kullan
-      let durumlar = __DURUMLAR__;
-      try {
-        const saved = localStorage.getItem("parca_durumlari");
-        if (saved) durumlar = JSON.parse(saved);
-      } catch(e) {}
+     let durumlar = __DURUMLAR__;
+const PYTHON_VERSION = "__VERSION__";
 
+try {
+    const savedVersion = localStorage.getItem("parca_durumlari_version");
+    const saved = localStorage.getItem("parca_durumlari");
+    
+    // Sadece version uyuşuyorsa localStorage'ı kullan
+    if (saved && savedVersion === PYTHON_VERSION) {
+        durumlar = JSON.parse(saved);
+    } else {
+        // Version uyuşmuyor → Python'dan geleni kabul et, localStorage'ı güncelle
+        localStorage.setItem("parca_durumlari", JSON.stringify(durumlar));
+        localStorage.setItem("parca_durumlari_version", PYTHON_VERSION);
+    }
+} catch(e) {}
       // Renkleri uygula
       function applyColors() {
         document.querySelectorAll("path[data-parca]").forEach(path => {
@@ -511,8 +523,11 @@ def render_car_svg(parca_durumlari):
           durumlar[parca] = next;
 
           // localStorage'a kaydet
-          try { localStorage.setItem("parca_durumlari", JSON.stringify(durumlar)); } catch(e) {}
-
+         // localStorage'a kaydet
+            try { 
+                localStorage.setItem("parca_durumlari", JSON.stringify(durumlar));
+                localStorage.setItem("parca_durumlari_version", PYTHON_VERSION);  // ← YENİ
+            } catch(e) {}
           // Renk değiştir
           this.setAttribute("fill", COLORS[next]);
 
@@ -546,6 +561,11 @@ if "parca_durumlari" not in st.session_state:
 
 if "result" not in st.session_state:
     st.session_state.result = None
+if "reset_counter" not in st.session_state:
+    st.session_state.reset_counter = 0
+
+if "js_sync_counter" not in st.session_state:
+    st.session_state.js_sync_counter = 0
     # ════════════════════════════════════════════════════════════════
 # TIKLAMA OLAYINI YAKALA (URL query param)
 # ════════════════════════════════════════════════════════════════
@@ -719,12 +739,23 @@ with col_result:
     with cc1:
         if st.button("🔄 Hepsini Orijinal Yap", use_container_width=True):
             st.session_state.parca_durumlari = {p:"orijinal" for p in PARCA_LABELS.keys()}
-            streamlit_js_eval(js_expressions="localStorage.removeItem('parca_durumlari')", key="clear_ls_1")
+            # localStorage'ı KOMPLE temizle (version dahil)
+            streamlit_js_eval(
+                js_expressions="localStorage.removeItem('parca_durumlari'); localStorage.removeItem('parca_durumlari_version'); 'cleared'",
+                key=f"clear_orijinal_{st.session_state.get('reset_counter', 0)}"
+            )
+            st.session_state.reset_counter = st.session_state.get("reset_counter", 0) + 1
+            st.session_state.js_sync_counter += 1   # Sync'i de invalidate et
             st.rerun()
     with cc2:
         if st.button("🗑️ Hepsini Sıfırla", use_container_width=True):
             st.session_state.parca_durumlari = {p:"belirtilmemis" for p in PARCA_LABELS.keys()}
-            streamlit_js_eval(js_expressions="localStorage.removeItem('parca_durumlari')", key="clear_ls_2")
+            streamlit_js_eval(
+                js_expressions="localStorage.removeItem('parca_durumlari'); localStorage.removeItem('parca_durumlari_version'); 'cleared'",
+                key=f"clear_sifir_{st.session_state.get('reset_counter', 0)}"
+            )
+            st.session_state.reset_counter = st.session_state.get("reset_counter", 0) + 1
+            st.session_state.js_sync_counter += 1
             st.rerun()
 
       
