@@ -874,6 +874,6 @@ st.markdown("""
 <div style="text-align:center;color:#64748b;padding:2rem 0;font-size:0.9rem;">
     🚗 <b>Araç Pazarı ML Pipeline</b> — Üniversite Final Projesi<br>
     💡 3 ML Modeli (Fiyat → Satış Hızı → Fırsat) ile akıllı analiz<br>
-    📊 Sahibinden.com verisi · LightGBM + XGBoost + Stacking Ensemble · SHAP açıklaması
+    📊 ****.com verisi · LightGBM + XGBoost + Stacking Ensemble · SHAP açıklaması
 </div>
 """, unsafe_allow_html=True)
