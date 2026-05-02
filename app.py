@@ -697,9 +697,13 @@ with col_result:
     components.html(render_car_svg(st.session_state.parca_durumlari), height=520, scrolling=False)
 
     # Durumları senkronize et (JS'den Python'a)
+        # JS → Python state senkronizasyonu (her rerun'da fresh)
+    if "js_sync_counter" not in st.session_state:
+        st.session_state.js_sync_counter = 0
+
     sync_value = streamlit_js_eval(
         js_expressions="localStorage.getItem('parca_durumlari') || ''",
-        key="parca_state_sync_v1"
+        key=f"parca_sync_{st.session_state.js_sync_counter}"
     )
     if sync_value:
         try:
@@ -707,7 +711,6 @@ with col_result:
             new_durumlar = json.loads(sync_value)
             if isinstance(new_durumlar, dict) and new_durumlar != st.session_state.parca_durumlari:
                 st.session_state.parca_durumlari = new_durumlar
-                # Rerun ETME — sadece state güncelle
         except:
             pass
 
@@ -729,10 +732,22 @@ with col_result:
 # ════════════════════════════════════════════════════════════════
 # ANALİZ BUTONU
 # ════════════════════════════════════════════════════════════════
+# ════════════════════════════════════════════════════════════════
+# ANALİZ BUTONU (2 aşamalı: önce sync, sonra pipeline)
+# ════════════════════════════════════════════════════════════════
 st.markdown("---")
 analiz_btn = st.button("🔮 ARACI ANALİZ ET", use_container_width=True)
 
+# 1. AŞAMA: Buton tıklandı → senkronize et + pending işaretle
 if analiz_btn:
+    st.session_state.js_sync_counter += 1   # Force fresh JS read
+    st.session_state.pending_analysis = True
+    st.rerun()
+
+# 2. AŞAMA: Rerun sonrası — state taze, pipeline çalıştır
+if st.session_state.get("pending_analysis", False):
+    st.session_state.pending_analysis = False  # flag'i kapat
+
     user_input = {
         "marka": marka, "seri": seri, "model": model_adi,
         "yil": yil, "kilometre": km,
@@ -742,15 +757,17 @@ if analiz_btn:
         "motor_hacmi_num": motor_hacmi, "motor_gucu_num": motor_gucu,
         "tramer_tutari": tramer,
         "liste_fiyati": liste_fiyati,
-        "parca_durumlari": dict(st.session_state.parca_durumlari),
+        "parca_durumlari": dict(st.session_state.parca_durumlari),  # ✅ TAZE STATE
     }
+
     with st.spinner("🤖 Yapay zekâ aracı analiz ediyor..."):
         try:
             st.session_state.result = run_pipeline(user_input)
             
-            # 🔍 DEBUG — sınıf eşleşmesini kontrol
-            r = st.session_state.result
-           
+            # Debug: state'in doğru gönderildiğini logla
+            hasarli_sayi = sum(1 for v in user_input["parca_durumlari"].values() 
+                                if v in ["boyali", "degismis", "lokal_boyali"])
+            st.success(f"✅ Analiz tamamlandı! ({hasarli_sayi} hasarlı parça hesaba katıldı)")
         except Exception as e:
             st.error(f"❌ Analiz hatası: {e}")
             st.session_state.result = None
