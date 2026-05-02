@@ -8,3 +8,4 @@ xgboost
 shap
 matplotlib
 pyarrow
+streamlit-js-eval
