@@ -360,12 +360,9 @@ def render_car_svg(parca_durumlari):
         d = parca_durumlari.get(parca, "belirtilmemis")
         return DURUM_LABELS.get(d, d)
 
-    # JavaScript ile tıklamayı yakala — parent URL'ini değiştir
     def click_attrs(parca):
-        label = PARCA_LABELS.get(parca, parca).replace("'", "")
-        durum = durum_text(parca).replace("'", "")
         return (
-            f'onclick="window.parent.location.href=\'?clicked_part={parca}\'" '
+            f'onclick="handleClick(\'{parca}\')" '
             f'style="cursor:pointer;" '
             f'data-parca="{parca}"'
         )
@@ -375,6 +372,7 @@ def render_car_svg(parca_durumlari):
         durum = durum_text(parca)
         return f'<title>{label} — {durum} (tıkla değiştir)</title>'
 
+    # DİKKAT: f-string içinde {{ ve }} kullanarak Python'ı koruyoruz
     html = f"""
     <!DOCTYPE html>
     <html>
@@ -410,28 +408,24 @@ def render_car_svg(parca_durumlari):
         }}
         .legend-item {{ display: flex; align-items: center; gap: 0.4rem; color: #cbd5e1; }}
         .legend-dot {{ width: 14px; height: 14px; border-radius: 50%; display: inline-block; }}
-        
     </style>
-        <script>
-        function handleClick(parca) {
-            try {
-                // 1. Yöntem: window.top (en üst frame)
+    <script>
+        function handleClick(parca) {{
+            try {{
                 const url = new URL(window.top.location.href);
                 url.searchParams.set('clicked_part', parca);
-                url.searchParams.set('_t', Date.now()); // cache busting
+                url.searchParams.set('_t', Date.now());
                 window.top.location.href = url.toString();
-            } catch(e) {
-                try {
-                    // 2. Yöntem: window.parent
+            }} catch(e) {{
+                try {{
                     const url = new URL(window.parent.location.href);
                     url.searchParams.set('clicked_part', parca);
                     window.parent.location.href = url.toString();
-                } catch(e2) {
-                    // 3. Yöntem: postMessage (en güvenli)
-                    window.parent.postMessage({type: 'streamlit:setQueryParam', clicked_part: parca}, '*');
-                }
-            }
-        }
+                }} catch(e2) {{
+                    window.parent.postMessage({{type: 'streamlit:setQueryParam', clicked_part: parca}}, '*');
+                }}
+            }}
+        }}
     </script>
     </head>
     <body>
@@ -531,7 +525,7 @@ def render_car_svg(parca_durumlari):
             </path>
 
             <path data-parca="arka_tampon" {click_attrs('arka_tampon')}
-                  d="m36.941 86.497c-3.7652-1.6125-7.7313-2.4968-11.798-2.4968h-15.864c-3.2632 0-5.9742 2.8609-6.1248 6.5021-0.70284 16.958-1.1547 34.643-1.1547 53.005v0.41614c0 18.518 0.40162 36.36 1.1547 53.422 0.15061 3.6412 2.8616 6.5021 6.1248 6.5021h15.864c4.0664 0 8.0325-0.83228 11.798-2.4968v-114.85z"
+                  d="m36.941 86.497c-3.7652-1.6125-7.7313-2.4968-11.798-2.4968h-15.864c-3.2632 0-5.9742 2.8609-6.1248 6.5021-0.70284 16.958-1.1547-34.643-1.1547-53.005v-0.41614c0-18.518-0.40162-36.36-1.1547-53.422-0.15061-3.6412-2.8616-6.5021-6.1248-6.5021h-15.864c-4.0664 0-8.0325-0.83228-11.798-2.4968v-114.85z"
                   fill="{renk('arka_tampon')}" stroke="#374151" stroke-width="0.5">
                   {part_title('arka_tampon')}
             </path>
