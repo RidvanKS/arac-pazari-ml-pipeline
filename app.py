@@ -410,7 +410,29 @@ def render_car_svg(parca_durumlari):
         }}
         .legend-item {{ display: flex; align-items: center; gap: 0.4rem; color: #cbd5e1; }}
         .legend-dot {{ width: 14px; height: 14px; border-radius: 50%; display: inline-block; }}
+        
     </style>
+        <script>
+        function handleClick(parca) {
+            try {
+                // 1. Yöntem: window.top (en üst frame)
+                const url = new URL(window.top.location.href);
+                url.searchParams.set('clicked_part', parca);
+                url.searchParams.set('_t', Date.now()); // cache busting
+                window.top.location.href = url.toString();
+            } catch(e) {
+                try {
+                    // 2. Yöntem: window.parent
+                    const url = new URL(window.parent.location.href);
+                    url.searchParams.set('clicked_part', parca);
+                    window.parent.location.href = url.toString();
+                } catch(e2) {
+                    // 3. Yöntem: postMessage (en güvenli)
+                    window.parent.postMessage({type: 'streamlit:setQueryParam', clicked_part: parca}, '*');
+                }
+            }
+        }
+    </script>
     </head>
     <body>
     <div class="car-container">
@@ -715,32 +737,8 @@ with col_result:
             st.rerun()
 
     # Parça parça seçim
-    with st.expander("🔧 Parça Detaylarını Düzenle", expanded=True):
-        durum_secenekleri = list(DURUM_LABELS.keys())
-        durum_etiketler = [DURUM_LABELS[k] for k in durum_secenekleri]
-
-        # 13 parçayı 2'li gruplar halinde göster
-        parca_keys = list(PARCA_LABELS.keys())
-        for i in range(0, len(parca_keys), 2):
-            cols = st.columns(2)
-            for j, col in enumerate(cols):
-                if i+j < len(parca_keys):
-                    parca = parca_keys[i+j]
-                    with col:
-                        current = st.session_state.parca_durumlari.get(parca, "orijinal")
-                        idx = durum_secenekleri.index(current) if current in durum_secenekleri else 0
-                        secim = st.selectbox(
-                            PARCA_LABELS[parca],
-                            options=durum_etiketler,
-                            index=idx,
-                            key=f"parca_{parca}",
-                        )
-                        # Etiketten anahtara dön
-                        secim_key = durum_secenekleri[durum_etiketler.index(secim)]
-                        if st.session_state.parca_durumlari.get(parca) != secim_key:
-                            st.session_state.parca_durumlari[parca] = secim_key
-                            st.rerun()
-
+  
+     
 
 # ════════════════════════════════════════════════════════════════
 # ANALİZ BUTONU
