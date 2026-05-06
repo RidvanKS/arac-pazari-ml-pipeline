@@ -1207,15 +1207,15 @@ if st.session_state.result is not None:
     firsat_olasiliklar = m3["olasiliklar"]
 
     style_map = {
-        "Altin_Firsat": {"emoji":"🟢","label":"ALTIN FIRSAT","class":"badge-altin",
-                         "desc":"Bu araç fiyat–değer dengesi açısından <b>çok avantajlı</b>. Piyasanın altında ve hızlı satış beklentisi var."},
-        "Tuzak":        {"emoji":"⚠️","label":"TUZAK","class":"badge-tuzak",
-                         "desc":"Fiyat <b>cazip görünüyor</b> ama satış yavaş. <b>Dikkat!</b> Gizli bir sorun olabilir — detaylı incele."},
-        "Premium":      {"emoji":"💎","label":"PREMIUM","class":"badge-premium",
-                         "desc":"Fiyat piyasa üstünde ama <b>popüler bir model</b> — yine de hızlı satılır. Marka değeri var."},
-        "Riskli":       {"emoji":"🔴","label":"RİSKLİ","class":"badge-riskli",
-                         "desc":"Hem <b>pahalı</b> hem <b>yavaş satılıyor</b>. Yatırım açısından kaçınılması önerilir."},
-    }
+    "Altin_Firsat": {"emoji":"🟢","label":"ALTIN FIRSAT","class":"badge-altin",
+                     "desc":"Bu araç fiyat–değer dengesi açısından <b>çok avantajlı</b>. Piyasanın altında ve hızlı satış beklentisi var."},
+    "Tuzak":        {"emoji":"⚠️","label":"TUZAK","class":"badge-tuzak",
+                     "desc":"Fiyat <b>cazip görünüyor</b> ama satış yavaş. <b>Dikkat!</b> Gizli bir sorun olabilir — detaylı incele."},
+    "Premium":      {"emoji":"💎","label":"PREMIUM","class":"badge-premium",
+                     "desc":"Fiyat piyasa üstünde ama <b>popüler bir model</b> — yine de hızlı satılır. Marka değeri var."},
+    "Riskli":       {"emoji":"🔴","label":"RİSKLİ","class":"badge-riskli",
+                     "desc":"Hem <b>pahalı</b> hem <b>yavaş satılıyor</b>. Yatırım açısından kaçınılması önerilir."},
+}
     s = style_map.get(firsat, {"emoji":"❓","label":firsat,"class":"badge-altin","desc":""})
 
     st.markdown(f"""
