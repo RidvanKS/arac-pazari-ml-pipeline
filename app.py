@@ -1313,17 +1313,32 @@ if st.session_state.result is not None:
     """, unsafe_allow_html=True)
 
     # 4 sınıf olasılık grafiği
-    st.markdown("**📊 Tüm Kategorilerin Olasılıkları**")
-    sirali = sorted(firsat_olasiliklar.items(), key=lambda x: -x[1])
-    for kat, olasilik in sirali:
-        st_info = style_map.get(kat, {"emoji":"•","label":kat})
-        col_lbl, col_bar = st.columns([1, 3])
-        with col_lbl:
-            st.markdown(f"{st_info['emoji']} **{st_info['label']}**")
-        with col_bar:
-            st.progress(olasilik)
-            st.caption(f"{olasilik:.1%}")
+    # Olasılık / karar kaynağı gösterimi
+    if firsat == "Normal":
+        st.markdown("**📊 Karar Kaynağı**")
+        st.markdown("""
+        <div class="info-box">
+            ℹ️ Bu sonuç <b>model olasılığı değil</b>, fiyat farkı kontrolüne dayalı 
+            <b>kural bazlı</b> bir karardır.<br>
+            Araç piyasa değerine yakın olduğu için Model 3 fırsat/risk sınıflandırmasına sokulmadı.
+        </div>
+        """, unsafe_allow_html=True)
 
+    else:
+        st.markdown("**📊 Tüm Kategorilerin Olasılıkları**")
+        sirali = sorted(firsat_olasiliklar.items(), key=lambda x: -x[1])
+
+        for kat, olasilik in sirali:
+            st_info = style_map.get(kat, {"emoji": "•", "label": kat})
+
+            col_lbl, col_bar = st.columns([1, 3])
+
+            with col_lbl:
+                st.markdown(f"{st_info['emoji']} **{st_info['label']}**")
+
+            with col_bar:
+                st.progress(olasilik)
+                st.caption(f"{olasilik:.1%}")
     # ───── SHAP Açıklaması ─────
     st.markdown("---")
     st.markdown("## 🔍 Karar Açıklaması (Yapay Zekâ Neden Böyle Karar Verdi?)")
