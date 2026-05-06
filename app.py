@@ -222,7 +222,83 @@ st.markdown("""
     .stCaption, small {
         color: #64748b !important;
     }
+/* ═══════════════════════════════════════════════════════
+   SELECTBOX / DROPDOWN BEYAZ TEMA DÜZELTMESİ
+   ═══════════════════════════════════════════════════════ */
 
+/* Selectbox kapalı hali */
+div[data-baseweb="select"] > div {
+    background-color: #ffffff !important;
+    color: #0f172a !important;
+    border: 1px solid #cbd5e1 !important;
+    border-radius: 10px !important;
+}
+
+/* Selectbox içindeki seçili yazı */
+div[data-baseweb="select"] span {
+    color: #0f172a !important;
+}
+
+/* Selectbox ok ikonu */
+div[data-baseweb="select"] svg {
+    color: #475569 !important;
+    fill: #475569 !important;
+}
+
+/* Dropdown açılan kutu */
+div[data-baseweb="popover"] {
+    background-color: #ffffff !important;
+    border: 1px solid #cbd5e1 !important;
+    border-radius: 10px !important;
+    box-shadow: 0 12px 30px rgba(15, 23, 42, 0.18) !important;
+}
+
+/* Dropdown menu arka planı */
+div[data-baseweb="menu"],
+ul[role="listbox"] {
+    background-color: #ffffff !important;
+    color: #0f172a !important;
+    border-radius: 10px !important;
+}
+
+/* Dropdown seçenekleri */
+li[role="option"],
+div[role="option"] {
+    background-color: #ffffff !important;
+    color: #0f172a !important;
+}
+
+/* Dropdown seçeneklerinin içindeki tüm yazılar */
+li[role="option"] *,
+div[role="option"] * {
+    color: #0f172a !important;
+}
+
+/* Hover edilen seçenek */
+li[role="option"]:hover,
+div[role="option"]:hover {
+    background-color: #e0f2fe !important;
+    color: #0f172a !important;
+}
+
+/* Seçili seçenek */
+li[aria-selected="true"],
+div[aria-selected="true"] {
+    background-color: #dbeafe !important;
+    color: #0f172a !important;
+    font-weight: 700 !important;
+}
+
+/* Dropdown içindeki input/search alanı varsa */
+div[data-baseweb="popover"] input {
+    background-color: #ffffff !important;
+    color: #0f172a !important;
+}
+
+/* Placeholder / gri yazılar */
+div[data-baseweb="select"] input::placeholder {
+    color: #64748b !important;
+}
 </style>
 """, unsafe_allow_html=True)
 
