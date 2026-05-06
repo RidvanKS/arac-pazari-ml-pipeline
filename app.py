@@ -466,13 +466,97 @@ def add_market_and_interaction_features(row_df, user_input, tahmini_fiyat,
 
     return pd.DataFrame([r])
 
+def calculate_damage_penalty_pct(parca_durumlari, tramer_tutari=0):
+    """
+    Hasar durumuna göre iş kuralı bazlı fiyat cezası üretir.
+    Amaç: Hasarlı/boyalı parça fiyatı yapay olarak artırmasın.
+    """
 
+    # Parça önem katsayıları
+    parca_agirlik = {
+        "tavan": 2.5,
+        "kaput": 1.8,
+        "bagaj_kapagi": 1.4,
+
+        "on_tampon": 0.6,
+        "arka_tampon": 0.6,
+
+        "sol_on_camurluk": 1.0,
+        "sag_on_camurluk": 1.0,
+        "sol_arka_camurluk": 1.2,
+        "sag_arka_camurluk": 1.2,
+
+        "sol_on_kapi": 1.1,
+        "sag_on_kapi": 1.1,
+        "sol_arka_kapi": 1.1,
+        "sag_arka_kapi": 1.1,
+    }
+
+    # Durum ceza katsayıları
+    durum_ceza = {
+        "orijinal": 0.0,
+        "belirtilmemis": 0.15,
+        "lokal_boyali": 0.20,
+        "boyali": 0.45,
+        "degismis": 0.90,
+    }
+
+    penalty = 0.0
+
+    for parca, durum in parca_durumlari.items():
+        agirlik = parca_agirlik.get(parca, 1.0)
+        ceza = durum_ceza.get(durum, 0.0)
+        penalty += agirlik * ceza
+
+    # Tramer etkisi
+    if tramer_tutari > 0:
+        if tramer_tutari < 25_000:
+            penalty += 0.3
+        elif tramer_tutari < 75_000:
+            penalty += 0.8
+        elif tramer_tutari < 150_000:
+            penalty += 1.5
+        else:
+            penalty += 2.5
+
+    # Penalty yüzde olarak.
+    # Çok agresif olmasın diye üst sınır koyuyoruz.
+    penalty_pct = min(penalty, 12.0)
+
+    return penalty_pct
 def run_pipeline(user_input):
     base_row = build_feature_row(user_input, encoders, df, damage_map)
     m1_features = get_feature_list(model1_meta, model1)
-    X1 = base_row.reindex(columns=m1_features, fill_value=0)
-    tahmini_fiyat = float(model1.predict(X1)[0])
 
+    # 1) Kullanıcının girdiği hasar durumuyla ham tahmin
+    X1 = base_row.reindex(columns=m1_features, fill_value=0)
+    raw_tahmini_fiyat = float(model1.predict(X1)[0])
+
+    # 2) Aynı aracın tüm parçaları orijinalmiş gibi referans tahmini
+    original_input = user_input.copy()
+    original_input["parca_durumlari"] = {
+        p: "orijinal" for p in PARCA_LABELS.keys()
+    }
+
+    original_row = build_feature_row(original_input, encoders, df, damage_map)
+    X1_original = original_row.reindex(columns=m1_features, fill_value=0)
+    original_tahmini_fiyat = float(model1.predict(X1_original)[0])
+
+    # 3) Hasar cezası hesapla
+    damage_penalty_pct = calculate_damage_penalty_pct(
+        user_input.get("parca_durumlari", {}),
+        user_input.get("tramer_tutari", 0)
+    )
+
+    damage_adjusted_cap = original_tahmini_fiyat * (1 - damage_penalty_pct / 100)
+
+    # 4) Nihai fiyat:
+    # Hasarlı tahmin, orijinal referansın üstüne çıkamaz.
+    # Ayrıca hasar cezası uygulanmış üst sınırı aşamaz.
+    tahmini_fiyat = min(raw_tahmini_fiyat, damage_adjusted_cap)
+
+    # Güvenlik
+    tahmini_fiyat = max(tahmini_fiyat, 50_000)
     liste_raw = user_input.get("liste_fiyati")
     liste = liste_raw if liste_raw is not None else tahmini_fiyat
     fark_pct = ((liste-tahmini_fiyat)/tahmini_fiyat)*100
@@ -509,11 +593,14 @@ def run_pipeline(user_input):
     m3_classes = [resolve(c) for c in m3_classes_raw]
 
     return {
-        "model1": {
-            "tahmini_piyasa_fiyati": tahmini_fiyat,
-            "liste_fiyati": liste_raw,
-            "fiyat_fark_pct": fark_pct,
-        },
+       "model1": {
+    "tahmini_piyasa_fiyati": tahmini_fiyat,
+    "liste_fiyati": liste_raw,
+    "fiyat_fark_pct": fark_pct,
+    "raw_tahmini_fiyat": raw_tahmini_fiyat,
+    "original_tahmini_fiyat": original_tahmini_fiyat,
+    "damage_penalty_pct": damage_penalty_pct,
+},
         "model2": {
             "tahmin": speed_labels[m2_pred],
             "olasilik_hizli": float(m2_proba[0]),
@@ -525,6 +612,8 @@ def run_pipeline(user_input):
         },
         "_X2": X2,
         "_enriched": enriched,
+    
+    
     }
 
 
