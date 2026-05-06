@@ -579,53 +579,42 @@ def run_pipeline(user_input):
 # ══════════════════════════════════════════════════════
     # Model 3 öncesi karar katmanı (HASAR KONTROLLÜ)
     # ══════════════════════════════════════════════════════
-    thr = model3_meta.get("thresholds", {}) or {}
-    ucuz_esik = thr.get("ucuz_esik_pct", -15)
-    pahali_esik = thr.get("pahali_esik_pct", 15)
+   # ✅ YENİ: KARAR TAMAMEN MODEL 3 (YAPAY ZEKA) TARAFINDAN VERİLİR
+    m3_features = get_feature_list(model3_meta, model3)
+    X3 = enriched.reindex(columns=m3_features, fill_value=0)
 
-    # Hasar durumunu kontrol edelim (base_row içindeki sayılardan)
-    degisen_sayisi = int(base_row.iloc[0]["degismis_sayi"])
-    hasar_skoru = float(base_row.iloc[0]["parca_risk_toplam"])
+    # Model tahmini ve olasılık hesaplama
+    m3_proba = model3.predict_proba(X3)[0]
+    m3_pred_idx = int(np.argmax(m3_proba))
+    m3_classes_raw = list(model3.classes_)
+
+    # Sınıf isimlerini (Altin_Firsat, Riskli vb.) eşleştirme
+    label_map = model3_meta.get("firsat_class_map", {})
+    inverse_map = {v: k for k, v in label_map.items()}
+    label_list = model3_meta.get("firsat_labels", [])
+
+    def resolve(c):
+        if c in inverse_map: return inverse_map[c]
+        try:
+            idx = int(c)
+            if 0 <= idx < len(label_list): return label_list[idx]
+        except: pass
+        return str(c)
+
+    m3_classes = [resolve(c) for c in m3_classes_raw]
+    m3_final_label = m3_classes[m3_pred_idx]
     
-    # 2+ değişen veya yüksek hasar skoru varsa aracı "Normal" yapma
-    arac_riskli_mi = (degisen_sayisi >= 2) or (hasar_skoru >= 10)
+    # Olasılık grafiği için sözlük yapısı
+    m3_olasiliklar = {
+        m3_classes[i]: float(m3_proba[i])
+        for i in range(len(m3_classes))
+    }
 
-    # 1. Senaryo: Liste fiyatı girilmediyse
-    if liste_raw is None:
-        if arac_riskli_mi:
-            m3_final_label = "Riskli"
-            m3_note = f"Liste fiyatı yok ancak araçta {degisen_sayisi} değişen parça olduğu için 'Riskli' görüldü."
-        else:
-            m3_final_label = "Normal"
-            m3_note = "Liste fiyatı yok, düşük hasarlı araç Piyasa Uyumlu kabul edildi."
-        m3_olasiliklar = {m3_final_label: 1.0}
-
-    # 2. Senaryo: Fiyat piyasaya uygun olsa bile araç haşatsa
-    elif (ucuz_esik <= fark_pct <= pahali_esik) and arac_riskli_mi:
-        m3_final_label = "Riskli"
-        m3_note = f"Fiyat piyasaya uygun ({fark_pct:+.1f}%) olsa da yüksek hasar nedeniyle araç 'Riskli' olarak işaretlendi."
-        m3_olasiliklar = {"Riskli": 1.0}
-
-    # 3. Senaryo: Hem fiyat uygun hem araç temizse
-    elif ucuz_esik <= fark_pct <= pahali_esik:
-        m3_final_label = "Normal"
-        m3_olasiliklar = {"Normal": 1.0}
-        m3_note = f"Liste fiyatı piyasa değerine yakın ({fark_pct:+.1f}%) ve kondisyon makul."
-
-    # 4. Senaryo: Fiyat uçlardaysa (Çok ucuz veya pahalı) -> Model 3 (ML) devreye girsin
-    
-    else:
-        # Sadece gerçekten ucuz veya pahalı araçlarda Model 3 çalışsın
-        m3_features = get_feature_list(model3_meta, model3)
-        X3 = enriched.reindex(columns=m3_features, fill_value=0)
-
-        m3_proba = model3.predict_proba(X3)[0]
-        m3_pred_idx = int(np.argmax(m3_proba))
-        m3_classes_raw = list(model3.classes_)
-
-        label_map = model3_meta.get("firsat_class_map", {})
-        inverse_map = {v: k for k, v in label_map.items()}
-        label_list = model3_meta.get("firsat_labels", [])
+    # Modelin güven puanı düşükse ufak bir not ekle
+    max_prob = float(np.max(m3_proba))
+    m3_note = ""
+    if max_prob < 0.50:
+        m3_note = f"Model kararı düşük güven seviyesinde (%{max_prob*100:.1f})."
 
         def resolve(c):
             if c in inverse_map:
