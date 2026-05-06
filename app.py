@@ -1323,31 +1323,34 @@ if st.session_state.result is not None:
 
     # 4 sınıf olasılık grafiği
     # Olasılık / karar kaynağı gösterimi
-    if firsat == "Normal":
-        st.markdown("**📊 Karar Kaynağı**")
-        st.markdown("""
-        <div class="info-box">
-            ℹ️ Bu sonuç <b>model olasılığı değil</b>, fiyat farkı kontrolüne dayalı 
-            <b>kural bazlı</b> bir karardır.<br>
-            Araç piyasa değerine yakın olduğu için Model 3 fırsat/risk sınıflandırmasına sokulmadı.
+   # ───── Model 3: Olasılık ve Karar Kaynağı Gösterimi ─────
+    
+    # Kural bazlı karar verilip verilmediğini kontrol et 
+    # (Eğer olasılıklardan biri tam 1.0 ise bu bir kural bazlı karardır)
+    is_rule_based = any(prob == 1.0 for prob in firsat_olasiliklar.values())
+
+    if is_rule_based:
+        st.markdown("**📊 Karar Gerekçesi**")
+        st.markdown(f"""
+        <div class="info-box" style="border-left-color:#dc2626;">
+            ℹ️ Bu sonuç <b>model tahmini değil</b>, girilen hasar ve kondisyon verilerine dayalı 
+            <b>doğrudan sistem uyarısıdır</b>.<br><br>
+            <b>Neden?</b> {result['model3'].get('not', 'Araç kondisyonundaki yüksek risk faktörleri nedeniyle bu kategori seçilmiştir.')}
         </div>
         """, unsafe_allow_html=True)
 
     else:
         st.markdown("**📊 Tüm Kategorilerin Olasılıkları**")
         sirali = sorted(firsat_olasiliklar.items(), key=lambda x: -x[1])
-
         for kat, olasilik in sirali:
-            st_info = style_map.get(kat, {"emoji": "•", "label": kat})
-
+            st_info = style_map.get(kat, {"emoji":"•","label":kat})
             col_lbl, col_bar = st.columns([1, 3])
-
             with col_lbl:
                 st.markdown(f"{st_info['emoji']} **{st_info['label']}**")
-
             with col_bar:
                 st.progress(olasilik)
                 st.caption(f"{olasilik:.1%}")
+       
     # ───── SHAP Açıklaması ─────
     st.markdown("---")
     st.markdown("## 🔍 Karar Açıklaması (Yapay Zekâ Neden Böyle Karar Verdi?)")
