@@ -580,70 +580,60 @@ def run_pipeline(user_input):
     # Model 3 öncesi karar katmanı (HASAR KONTROLLÜ)
     # ══════════════════════════════════════════════════════
    # ✅ YENİ: KARAR TAMAMEN MODEL 3 (YAPAY ZEKA) TARAFINDAN VERİLİR
+    # ══════════════════════════════════════════════════════
+    # Model 3: Yapay Zeka Kararı + Mantık Filtresi
+    # ══════════════════════════════════════════════════════
     m3_features = get_feature_list(model3_meta, model3)
     X3 = enriched.reindex(columns=m3_features, fill_value=0)
 
-    # Model tahmini ve olasılık hesaplama
+    # 1. Ham Yapay Zeka Tahminini Al (Model Devre Dışı Değil!)
     m3_proba = model3.predict_proba(X3)[0]
     m3_pred_idx = int(np.argmax(m3_proba))
     m3_classes_raw = list(model3.classes_)
 
-    # Sınıf isimlerini (Altin_Firsat, Riskli vb.) eşleştirme
+    # Sınıf isimlerini çözümleme
     label_map = model3_meta.get("firsat_class_map", {})
     inverse_map = {v: k for k, v in label_map.items()}
     label_list = model3_meta.get("firsat_labels", [])
-
     def resolve(c):
         if c in inverse_map: return inverse_map[c]
-        try:
-            idx = int(c)
-            if 0 <= idx < len(label_list): return label_list[idx]
-        except: pass
         return str(c)
-
     m3_classes = [resolve(c) for c in m3_classes_raw]
-    m3_final_label = m3_classes[m3_pred_idx]
     
-    # Olasılık grafiği için sözlük yapısı
-    m3_olasiliklar = {
-        m3_classes[i]: float(m3_proba[i])
-        for i in range(len(m3_classes))
+    # Modelin ham kararı
+    m3_final_label = m3_classes[m3_pred_idx]
+    m3_olasiliklar = {m3_classes[i]: float(m3_proba[i]) for i in range(len(m3_classes))}
+
+    # 2. KRİTİK FİLTRE: Hasar ve Fiyat Analizi (Mühendislik Katmanı)
+    # base_row içinden gerçek değerleri çekelim
+    toplam_degisen = int(base_row.iloc[0]["degismis_sayi"])
+    hasar_skoru = float(base_row.iloc[0]["parca_risk_toplam"])
+    
+    # Kaput, Tavan veya Bagaj gibi kritik parçalar değişmiş mi?
+    kritik_parca_hasari = False
+    for p in ["kaput", "tavan", "bagaj_kapagi"]:
+        if user_input["parca_durumlari"].get(p) in ["degismis", "boyali"]:
+            kritik_parca_hasari = True
+
+    # EĞER: Fiyat farkı makulse (%-12 ile %+12 arası) 
+    # VE ciddi bir hasar (kritik parça veya 2+ parça değişimi) yoksa:
+    if abs(fark_pct) <= 12 and (not kritik_parca_hasari) and (toplam_degisen < 2):
+        # Yapay zekanın "Tuzak" veya "Riskli" demesine rağmen biz piyasa gerçeğini uyguluyoruz
+        if m3_final_label in ["Tuzak", "Riskli"]:
+            m3_final_label = "Normal"
+            m3_note = "Model risk sinyali yakaladı ancak hasar sadece plastik aksam/minör seviyede olduğu için araç 'Piyasa Uyumlu' görüldü."
+    else:
+        m3_note = "" if float(np.max(m3_proba)) > 0.55 else "Model tahmini düşük güven seviyesinde."
+
+    return {
+        # ... (Geri kalan return değerleri model1 ve model2 için aynı kalsın)
+        "model3": {
+            "firsat_kategorisi": m3_final_label,
+            "olasiliklar": m3_olasiliklar,
+            "not": m3_note,
+        },
+        # ...
     }
-
-    # Modelin güven puanı düşükse ufak bir not ekle
-    max_prob = float(np.max(m3_proba))
-    m3_note = ""
-    if max_prob < 0.50:
-        m3_note = f"Model kararı düşük güven seviyesinde (%{max_prob*100:.1f})."
-
-        def resolve(c):
-            if c in inverse_map:
-                return inverse_map[c]
-            try:
-                idx = int(c)
-                if 0 <= idx < len(label_list):
-                    return label_list[idx]
-            except:
-                pass
-            return str(c)
-
-        m3_classes = [resolve(c) for c in m3_classes_raw]
-
-        m3_final_label = m3_classes[m3_pred_idx]
-        m3_olasiliklar = {
-            m3_classes[i]: float(m3_proba[i])
-            for i in range(len(m3_classes))
-        }
-
-        max_prob = float(np.max(m3_proba))
-
-        if max_prob < 0.55:
-            m3_note = (
-                f"Model kararı düşük/orta güven seviyesinde ({max_prob:.1%}). "
-                "Bu sonuç kesin karar değil, destekleyici sinyal olarak yorumlanmalıdır."
-            )
-        else:
-            m3_note = ""
 
     return {
        "model1": {
