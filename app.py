@@ -583,34 +583,40 @@ def run_pipeline(user_input):
     # Çünkü Model 3 eğitiminde Normal sınıfı çıkarılmıştı.
     # ══════════════════════════════════════════════════════
 
-    # ══════════════════════════════════════════════════════
-    # Model 3 öncesi iş kuralı (GÜNCELLENDİ)
-    # ══════════════════════════════════════════════════════
-
     thr = model3_meta.get("thresholds", {}) or {}
+
     ucuz_esik = thr.get("ucuz_esik_pct", -15)
     pahali_esik = thr.get("pahali_esik_pct", 15)
 
-    # ÖNEMLİ: Ciddi bir hasar cezası var mı? (%4'ten fazla ceza varsa hasarlı sayalım)
-    ciddi_hasar_var = damage_penalty_pct > 4.0
-
+    # Liste fiyatı girilmediyse veya fiyat piyasa bandındaysa Normal kabul et
     if liste_raw is None:
         m3_final_label = "Normal"
         m3_olasiliklar = {"Normal": 1.0}
-        m3_note = "Liste fiyatı girilmediği için analiz piyasa değeri üzerinden yapıldı."
+        m3_note = (
+            "Liste fiyatı girilmediği için fırsat/risk sınıflaması yapılmadı. "
+            "Araç piyasa değeri üzerinden Normal/Piyasa Uyumlu kabul edildi."
+        )
 
-    # EĞER hasar yoksa VE fiyat farkı makulse "Normal" de.
-    # AMA hasar varsa (ciddi_hasar_var), fark %0 olsa bile Model 3'ü çalıştır!
-    elif (not ciddi_hasar_var) and (ucuz_esik <= fark_pct <= pahali_esik):
+    elif ucuz_esik <= fark_pct <= pahali_esik:
         m3_final_label = "Normal"
         m3_olasiliklar = {"Normal": 1.0}
-        m3_note = f"Araç hasarsız ve fiyat piyasa bandında ({fark_pct:+.1f}%)."
+        m3_note = (
+            f"Liste fiyatı piyasa değerine yakın görünüyor ({fark_pct:+.1f}%). "
+            "Bu nedenle araç Normal/Piyasa Uyumlu olarak değerlendirildi."
+        )
 
     else:
-        # Burada artık Model 3 çalışacak ve 5 parça değişeni görüp "Riskli" veya "Tuzak" diyecek
+        # Sadece gerçekten ucuz veya pahalı araçlarda Model 3 çalışsın
         m3_features = get_feature_list(model3_meta, model3)
         X3 = enriched.reindex(columns=m3_features, fill_value=0)
-        # ... (Geri kalan Model 3 tahmin kodları aynı kalacak)
+
+        m3_proba = model3.predict_proba(X3)[0]
+        m3_pred_idx = int(np.argmax(m3_proba))
+        m3_classes_raw = list(model3.classes_)
+
+        label_map = model3_meta.get("firsat_class_map", {})
+        inverse_map = {v: k for k, v in label_map.items()}
+        label_list = model3_meta.get("firsat_labels", [])
 
         def resolve(c):
             if c in inverse_map:
