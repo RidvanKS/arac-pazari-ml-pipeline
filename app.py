@@ -576,35 +576,44 @@ def run_pipeline(user_input):
 
     enriched["tahmin_hizli_olasiligi"] = float(m2_proba[0])
     enriched["tahmin_yavas_olasiligi"] = float(m2_proba[1])
-
+# ══════════════════════════════════════════════════════
+    # Model 3 öncesi karar katmanı (HASAR KONTROLLÜ)
     # ══════════════════════════════════════════════════════
-    # Model 3 öncesi iş kuralı:
-    # Normal fiyat bölgesinde Model 3'ü zorla 4 sınıfa sokma.
-    # Çünkü Model 3 eğitiminde Normal sınıfı çıkarılmıştı.
-    # ══════════════════════════════════════════════════════
-
     thr = model3_meta.get("thresholds", {}) or {}
-
     ucuz_esik = thr.get("ucuz_esik_pct", -15)
     pahali_esik = thr.get("pahali_esik_pct", 15)
 
-    # Liste fiyatı girilmediyse veya fiyat piyasa bandındaysa Normal kabul et
-    if liste_raw is None:
-        m3_final_label = "Normal"
-        m3_olasiliklar = {"Normal": 1.0}
-        m3_note = (
-            "Liste fiyatı girilmediği için fırsat/risk sınıflaması yapılmadı. "
-            "Araç piyasa değeri üzerinden Normal/Piyasa Uyumlu kabul edildi."
-        )
+    # Hasar durumunu kontrol edelim (base_row içindeki sayılardan)
+    degisen_sayisi = int(base_row.iloc[0]["degismis_sayi"])
+    hasar_skoru = float(base_row.iloc[0]["parca_risk_toplam"])
+    
+    # 2+ değişen veya yüksek hasar skoru varsa aracı "Normal" yapma
+    arac_riskli_mi = (degisen_sayisi >= 2) or (hasar_skoru >= 10)
 
+    # 1. Senaryo: Liste fiyatı girilmediyse
+    if liste_raw is None:
+        if arac_riskli_mi:
+            m3_final_label = "Riskli"
+            m3_note = f"Liste fiyatı yok ancak araçta {degisen_sayisi} değişen parça olduğu için 'Riskli' görüldü."
+        else:
+            m3_final_label = "Normal"
+            m3_note = "Liste fiyatı yok, düşük hasarlı araç Piyasa Uyumlu kabul edildi."
+        m3_olasiliklar = {m3_final_label: 1.0}
+
+    # 2. Senaryo: Fiyat piyasaya uygun olsa bile araç haşatsa
+    elif (ucuz_esik <= fark_pct <= pahali_esik) and arac_riskli_mi:
+        m3_final_label = "Riskli"
+        m3_note = f"Fiyat piyasaya uygun ({fark_pct:+.1f}%) olsa da yüksek hasar nedeniyle araç 'Riskli' olarak işaretlendi."
+        m3_olasiliklar = {"Riskli": 1.0}
+
+    # 3. Senaryo: Hem fiyat uygun hem araç temizse
     elif ucuz_esik <= fark_pct <= pahali_esik:
         m3_final_label = "Normal"
         m3_olasiliklar = {"Normal": 1.0}
-        m3_note = (
-            f"Liste fiyatı piyasa değerine yakın görünüyor ({fark_pct:+.1f}%). "
-            "Bu nedenle araç Normal/Piyasa Uyumlu olarak değerlendirildi."
-        )
+        m3_note = f"Liste fiyatı piyasa değerine yakın ({fark_pct:+.1f}%) ve kondisyon makul."
 
+    # 4. Senaryo: Fiyat uçlardaysa (Çok ucuz veya pahalı) -> Model 3 (ML) devreye girsin
+    
     else:
         # Sadece gerçekten ucuz veya pahalı araçlarda Model 3 çalışsın
         m3_features = get_feature_list(model3_meta, model3)
