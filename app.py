@@ -25,67 +25,204 @@ st.set_page_config(
 )
 
 # ═══════════════════════════ CSS ═══════════════════════════
+# ═══════════════════════════ CSS — BEYAZ TEMA ═══════════════════════════
 st.markdown("""
 <style>
-    .stApp { background: linear-gradient(135deg, #0a0e1a 0%, #1a1f2e 100%); color: #f1f5f9; }
-    h1, h2, h3, h4 { color: #f1f5f9 !important; }
-    label, p, div { color: #e2e8f0; }
+    /* Genel sayfa */
+    .stApp {
+        background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+        color: #0f172a;
+    }
 
+    h1, h2, h3, h4 {
+        color: #0f172a !important;
+    }
+
+    label, p, div, span {
+        color: #1e293b;
+    }
+
+    /* Üst banner */
     .hero-banner {
-        background: linear-gradient(135deg, #1e3a8a 0%, #7c3aed 100%);
-        padding: 2rem; border-radius: 20px; text-align: center;
-        margin-bottom: 1.5rem; box-shadow: 0 10px 40px rgba(124,58,237,0.3);
+        background: linear-gradient(135deg, #2563eb 0%, #7c3aed 100%);
+        padding: 2rem;
+        border-radius: 20px;
+        text-align: center;
+        margin-bottom: 1.5rem;
+        box-shadow: 0 10px 35px rgba(37,99,235,0.25);
     }
-    .hero-banner h1 { color: white !important; margin: 0; font-size: 2.2rem; }
-    .hero-banner p  { color: #e9d5ff; margin: 0.5rem 0 0; font-size: 1.05rem; }
 
+    .hero-banner h1 {
+        color: white !important;
+        margin: 0;
+        font-size: 2.2rem;
+    }
+
+    .hero-banner p {
+        color: #eef2ff !important;
+        margin: 0.5rem 0 0;
+        font-size: 1.05rem;
+    }
+
+    /* Kartlar */
     .result-card {
-        background: #131826; border: 1px solid #2d3348; border-radius: 15px;
-        padding: 1.5rem; margin-bottom: 1rem; box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+        background: #ffffff;
+        border: 1px solid #cbd5e1;
+        border-radius: 15px;
+        padding: 1.5rem;
+        margin-bottom: 1rem;
+        box-shadow: 0 6px 20px rgba(15,23,42,0.10);
     }
-    .result-card h3 { margin-top: 0; }
 
+    .result-card h3 {
+        margin-top: 0;
+        color: #0f172a !important;
+    }
+
+    .result-card p,
+    .result-card td {
+        color: #334155 !important;
+    }
+
+    /* Badge */
     .badge {
-        display: inline-block; padding: 0.7rem 1.4rem; border-radius: 12px;
-        font-weight: 800; font-size: 1.2rem; margin: 0.3rem 0; letter-spacing: 0.5px;
+        display: inline-block;
+        padding: 0.7rem 1.4rem;
+        border-radius: 12px;
+        font-weight: 800;
+        font-size: 1.2rem;
+        margin: 0.3rem 0;
+        letter-spacing: 0.5px;
+        color: white !important;
     }
-    .badge-altin   { background: #16a34a; color: white; }
-    .badge-tuzak   { background: #f59e0b; color: white; }
-    .badge-premium { background: #2563eb; color: white; }
-    .badge-riskli  { background: #dc2626; color: white; }
 
+    .badge-altin   { background: #16a34a; color: white !important; }
+    .badge-tuzak   { background: #f59e0b; color: white !important; }
+    .badge-premium { background: #2563eb; color: white !important; }
+    .badge-riskli  { background: #dc2626; color: white !important; }
+
+    /* Bilgi kutuları */
     .info-box {
-        background: #1e293b; border-left: 4px solid #3b82f6;
-        padding: 1rem; border-radius: 8px; margin: 0.5rem 0;
-        font-size: 0.92rem; color: #cbd5e1;
+        background: #f1f5f9;
+        border-left: 4px solid #2563eb;
+        padding: 1rem;
+        border-radius: 8px;
+        margin: 0.5rem 0;
+        font-size: 0.92rem;
+        color: #334155 !important;
     }
-    .price-big   { font-size: 2.3rem; font-weight: 800; color: #60a5fa; }
-    .price-label { font-size: 0.85rem; color: #94a3b8; text-transform: uppercase; letter-spacing: 1px; }
 
+    .info-box b {
+        color: #0f172a !important;
+    }
+
+    /* Fiyat */
+    .price-big {
+        font-size: 2.3rem;
+        font-weight: 800;
+        color: #2563eb;
+    }
+
+    .price-label {
+        font-size: 0.85rem;
+        color: #64748b !important;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+    }
+
+    /* Araç legend */
     .car-legend {
-        display: flex; justify-content: center; gap: 1.2rem; flex-wrap: wrap;
-        margin-top: 0.8rem; font-size: 0.85rem;
+        display: flex;
+        justify-content: center;
+        gap: 1.2rem;
+        flex-wrap: wrap;
+        margin-top: 0.8rem;
+        font-size: 0.85rem;
     }
-    .legend-item { display:flex; align-items:center; gap:0.4rem; color:#cbd5e1; }
-    .legend-dot  { width: 14px; height: 14px; border-radius: 50%; display:inline-block; }
 
-    div[data-testid="stSelectbox"] label, div[data-testid="stNumberInput"] label {
-        color: #cbd5e1 !important; font-weight: 600;
+    .legend-item {
+        display: flex;
+        align-items: center;
+        gap: 0.4rem;
+        color: #334155 !important;
     }
+
+    .legend-dot {
+        width: 14px;
+        height: 14px;
+        border-radius: 50%;
+        display: inline-block;
+    }
+
+    /* Form label */
+    div[data-testid="stSelectbox"] label,
+    div[data-testid="stNumberInput"] label,
+    div[data-testid="stCheckbox"] label {
+        color: #1e293b !important;
+        font-weight: 600;
+    }
+
+    /* Input / select alanları */
+    div[data-baseweb="select"] > div,
+    input {
+        background-color: #ffffff !important;
+        color: #0f172a !important;
+        border-color: #cbd5e1 !important;
+    }
+
+    /* Butonlar */
     .stButton button {
-        background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%);
-        color: white; border: none; border-radius: 12px;
-        padding: 0.8rem 2rem; font-weight: 700; font-size: 1.05rem;
-        width: 100%; box-shadow: 0 4px 15px rgba(59,130,246,0.4);
+        background: linear-gradient(135deg, #2563eb 0%, #7c3aed 100%);
+        color: white !important;
+        border: none;
+        border-radius: 12px;
+        padding: 0.8rem 2rem;
+        font-weight: 700;
+        font-size: 1.05rem;
+        width: 100%;
+        box-shadow: 0 4px 15px rgba(37,99,235,0.25);
     }
-    .stButton button:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(59,130,246,0.6); }
+
+    .stButton button:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px rgba(37,99,235,0.35);
+    }
 
     .preset-btn button {
-        background: #1e293b !important; border: 1px solid #475569 !important;
-        font-size: 0.85rem !important; padding: 0.5rem !important;
+        background: #ffffff !important;
+        color: #1e293b !important;
+        border: 1px solid #cbd5e1 !important;
+        font-size: 0.85rem !important;
+        padding: 0.5rem !important;
     }
 
-    div[data-testid="stProgress"] > div > div > div > div { background: linear-gradient(90deg,#3b82f6,#8b5cf6); }
+    .preset-btn button:hover {
+        background: #f1f5f9 !important;
+        border-color: #2563eb !important;
+    }
+
+    /* Progress bar */
+    div[data-testid="stProgress"] > div > div > div > div {
+        background: linear-gradient(90deg,#2563eb,#7c3aed);
+    }
+
+    /* Expander */
+    div[data-testid="stExpander"] {
+        background: #ffffff;
+        border: 1px solid #cbd5e1;
+        border-radius: 10px;
+    }
+
+    /* Markdown separator */
+    hr {
+        border-color: #cbd5e1;
+    }
+
+    /* Caption / küçük metin */
+    .stCaption, small {
+        color: #64748b !important;
+    }
+
 </style>
 """, unsafe_allow_html=True)
 
