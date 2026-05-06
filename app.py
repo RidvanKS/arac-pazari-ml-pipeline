@@ -29,6 +29,10 @@ st.set_page_config(
 st.markdown("""
 <style>
     /* Genel sayfa */
+            .badge-normal {
+    background: #64748b;
+    color: white !important;
+}
     .stApp {
         background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
         color: #0f172a;
@@ -572,25 +576,76 @@ def run_pipeline(user_input):
 
     enriched["tahmin_hizli_olasiligi"] = float(m2_proba[0])
     enriched["tahmin_yavas_olasiligi"] = float(m2_proba[1])
-    m3_features = get_feature_list(model3_meta, model3)
-    X3 = enriched.reindex(columns=m3_features, fill_value=0)
-    m3_proba = model3.predict_proba(X3)[0]
-    m3_pred_idx = int(np.argmax(m3_proba))
-    m3_classes_raw = list(model3.classes_)
 
-    label_map = model3_meta.get("firsat_class_map", {})
-    inverse_map = {v:k for k,v in label_map.items()}
-    label_list = model3_meta.get("firsat_labels", [])
+    # ══════════════════════════════════════════════════════
+    # Model 3 öncesi iş kuralı:
+    # Normal fiyat bölgesinde Model 3'ü zorla 4 sınıfa sokma.
+    # Çünkü Model 3 eğitiminde Normal sınıfı çıkarılmıştı.
+    # ══════════════════════════════════════════════════════
 
-    def resolve(c):
-        if c in inverse_map: return inverse_map[c]
-        try:
-            idx = int(c)
-            if 0 <= idx < len(label_list): return label_list[idx]
-        except: pass
-        return str(c)
+    thr = model3_meta.get("thresholds", {}) or {}
 
-    m3_classes = [resolve(c) for c in m3_classes_raw]
+    ucuz_esik = thr.get("ucuz_esik_pct", -15)
+    pahali_esik = thr.get("pahali_esik_pct", 15)
+
+    # Liste fiyatı girilmediyse veya fiyat piyasa bandındaysa Normal kabul et
+    if liste_raw is None:
+        m3_final_label = "Normal"
+        m3_olasiliklar = {"Normal": 1.0}
+        m3_note = (
+            "Liste fiyatı girilmediği için fırsat/risk sınıflaması yapılmadı. "
+            "Araç piyasa değeri üzerinden Normal/Piyasa Uyumlu kabul edildi."
+        )
+
+    elif ucuz_esik <= fark_pct <= pahali_esik:
+        m3_final_label = "Normal"
+        m3_olasiliklar = {"Normal": 1.0}
+        m3_note = (
+            f"Liste fiyatı piyasa değerine yakın görünüyor ({fark_pct:+.1f}%). "
+            "Bu nedenle araç Normal/Piyasa Uyumlu olarak değerlendirildi."
+        )
+
+    else:
+        # Sadece gerçekten ucuz veya pahalı araçlarda Model 3 çalışsın
+        m3_features = get_feature_list(model3_meta, model3)
+        X3 = enriched.reindex(columns=m3_features, fill_value=0)
+
+        m3_proba = model3.predict_proba(X3)[0]
+        m3_pred_idx = int(np.argmax(m3_proba))
+        m3_classes_raw = list(model3.classes_)
+
+        label_map = model3_meta.get("firsat_class_map", {})
+        inverse_map = {v: k for k, v in label_map.items()}
+        label_list = model3_meta.get("firsat_labels", [])
+
+        def resolve(c):
+            if c in inverse_map:
+                return inverse_map[c]
+            try:
+                idx = int(c)
+                if 0 <= idx < len(label_list):
+                    return label_list[idx]
+            except:
+                pass
+            return str(c)
+
+        m3_classes = [resolve(c) for c in m3_classes_raw]
+
+        m3_final_label = m3_classes[m3_pred_idx]
+        m3_olasiliklar = {
+            m3_classes[i]: float(m3_proba[i])
+            for i in range(len(m3_classes))
+        }
+
+        max_prob = float(np.max(m3_proba))
+
+        if max_prob < 0.55:
+            m3_note = (
+                f"Model kararı düşük/orta güven seviyesinde ({max_prob:.1%}). "
+                "Bu sonuç kesin karar değil, destekleyici sinyal olarak yorumlanmalıdır."
+            )
+        else:
+            m3_note = ""
 
     return {
        "model1": {
@@ -607,9 +662,10 @@ def run_pipeline(user_input):
             "olasilik_yavas": float(m2_proba[1]),
         },
         "model3": {
-            "firsat_kategorisi": m3_classes[m3_pred_idx],
-            "olasiliklar": {m3_classes[i]: float(m3_proba[i]) for i in range(len(m3_classes))},
-        },
+    "firsat_kategorisi": m3_final_label,
+    "olasiliklar": m3_olasiliklar,
+    "not": m3_note,
+},
         "_X2": X2,
         "_enriched": enriched,
     
@@ -1205,6 +1261,7 @@ if st.session_state.result is not None:
     m3 = result["model3"]
     firsat = m3["firsat_kategorisi"]
     firsat_olasiliklar = m3["olasiliklar"]
+    m3_note = m3.get("not", "")
 
    
     style_map = {
@@ -1220,6 +1277,12 @@ if st.session_state.result is not None:
         "class": "badge-tuzak",
         "desc": "Fiyat <b>cazip görünse de</b> model bazı risk sinyalleri yakalıyor. Hasar, kilometre, segment veya fiyat anomalisi nedeniyle detaylı inceleme önerilir."
     },
+    "Normal": {
+    "emoji": "🟡",
+    "label": "PİYASA UYUMLU",
+    "class": "badge-normal",
+    "desc": "Araç piyasa değerine yakın görünüyor. Belirgin bir fırsat veya yüksek risk sinyali yok."
+},
     "Premium": {
         "emoji": "💎",
         "label": "PREMIUM",
