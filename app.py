@@ -1206,15 +1206,32 @@ if st.session_state.result is not None:
     firsat = m3["firsat_kategorisi"]
     firsat_olasiliklar = m3["olasiliklar"]
 
+   
     style_map = {
-    "Altin_Firsat": {"emoji":"🟢","label":"ALTIN FIRSAT","class":"badge-altin",
-                     "desc":"Bu araç fiyat–değer dengesi açısından <b>çok avantajlı</b>. Piyasanın altında ve hızlı satış beklentisi var."},
-    "Tuzak":        {"emoji":"⚠️","label":"TUZAK","class":"badge-tuzak",
-                     "desc":"Fiyat <b>cazip görünüyor</b> ama satış yavaş. <b>Dikkat!</b> Gizli bir sorun olabilir — detaylı incele."},
-    "Premium":      {"emoji":"💎","label":"PREMIUM","class":"badge-premium",
-                     "desc":"Fiyat piyasa üstünde ama <b>popüler bir model</b> — yine de hızlı satılır. Marka değeri var."},
-    "Riskli":       {"emoji":"🔴","label":"RİSKLİ","class":"badge-riskli",
-                     "desc":"Hem <b>pahalı</b> hem <b>yavaş satılıyor</b>. Yatırım açısından kaçınılması önerilir."},
+    "Altin_Firsat": {
+        "emoji": "🟢",
+        "label": "ALTIN FIRSAT",
+        "class": "badge-altin",
+        "desc": "Bu araç fiyat–değer dengesi açısından <b>avantajlı</b> görünüyor. Piyasa değerine göre cazip ve genel risk sinyali düşük."
+    },
+    "Tuzak": {
+        "emoji": "⚠️",
+        "label": "TUZAK",
+        "class": "badge-tuzak",
+        "desc": "Fiyat <b>cazip görünse de</b> model bazı risk sinyalleri yakalıyor. Hasar, kilometre, segment veya fiyat anomalisi nedeniyle detaylı inceleme önerilir."
+    },
+    "Premium": {
+        "emoji": "💎",
+        "label": "PREMIUM",
+        "class": "badge-premium",
+        "desc": "Araç piyasa değerinin üzerinde fiyatlanmış olabilir; ancak marka/model, donanım veya talep etkisi nedeniyle premium algısı taşıyor olabilir."
+    },
+    "Riskli": {
+        "emoji": "🔴",
+        "label": "RİSKLİ",
+        "class": "badge-riskli",
+        "desc": "Araç fiyat, hasar, kilometre veya segment özellikleri açısından riskli görünüyor. Satın alma öncesi detaylı ekspertiz ve fiyat karşılaştırması önerilir."
+    },
 }
     s = style_map.get(firsat, {"emoji":"❓","label":firsat,"class":"badge-altin","desc":""})
 
