@@ -625,39 +625,28 @@ def run_pipeline(user_input):
     else:
         m3_note = "" if float(np.max(m3_proba)) > 0.55 else "Model tahmini düşük güven seviyesinde."
 
+   # run_pipeline fonksiyonunun en sonundaki return bloğu böyle olmalı:
     return {
-        # ... (Geri kalan return değerleri model1 ve model2 için aynı kalsın)
-        "model3": {
-            "firsat_kategorisi": m3_final_label,
-            "olasiliklar": m3_olasiliklar,
-            "not": m3_note,
+        "model1": {
+            "tahmini_piyasa_fiyati": tahmini_fiyat,
+            "liste_fiyati": liste_raw,
+            "fiyat_fark_pct": fark_pct,
+            "raw_tahmini_fiyat": raw_tahmini_fiyat,
+            "original_tahmini_fiyat": original_tahmini_fiyat,
+            "damage_penalty_pct": damage_penalty_pct,
         },
-        # ...
-    }
-
-    return {
-       "model1": {
-    "tahmini_piyasa_fiyati": tahmini_fiyat,
-    "liste_fiyati": liste_raw,
-    "fiyat_fark_pct": fark_pct,
-    "raw_tahmini_fiyat": raw_tahmini_fiyat,
-    "original_tahmini_fiyat": original_tahmini_fiyat,
-    "damage_penalty_pct": damage_penalty_pct,
-},
         "model2": {
             "tahmin": speed_labels[m2_pred],
             "olasilik_hizli": float(m2_proba[0]),
             "olasilik_yavas": float(m2_proba[1]),
         },
         "model3": {
-    "firsat_kategorisi": m3_final_label,
-    "olasiliklar": m3_olasiliklar,
-    "not": m3_note,
-},
+            "firsat_kategorisi": m3_final_label,
+            "olasiliklar": m3_olasiliklar,
+            "not": m3_note,
+        },
         "_X2": X2,
         "_enriched": enriched,
-    
-    
     }
 
 
