@@ -433,16 +433,22 @@ def add_market_and_interaction_features(row_df, user_input, tahmini_fiyat,
 
     r["liste_fiyati"]          = liste
     r["tahmini_piyasa_fiyati"] = tahmini_fiyat
-    r["fiyat_fark_pct"]        = float(np.clip((liste-tahmini_fiyat)/tahmini_fiyat*100, -100, 200))
+    r["fiyat_fark_pct"]        = float(np.clip((liste-tahmini_fiyat)/max(tahmini_fiyat,1)*100, -100, 200))
     r["fiyat_orani"]           = float(np.clip(liste/max(tahmini_fiyat,1), 0.3, 3.0))
     r["mutlak_fiyat_farki"]    = abs(liste - tahmini_fiyat)
     r["log_fiyat_orani"]       = float(np.log1p(r["fiyat_orani"]))
 
+    # 🛡️ GÜVENLİ ERİŞİM: Segment verisi yoksa global istatistikleri kullan
     seg_key = (user_input["marka"], user_input["seri"])
     seg = segment_lookup.get(seg_key, global_stats)
-    seg_mean = seg["mean_price"]
-    seg_std  = seg["std_price"] if seg["std_price"] > 0 else 0
+    
+    # Tüm değerler için .get() kullanarak varsayılan (fallback) değerler ata
+    seg_mean = seg.get("mean_price", global_stats.get("mean_price", 500000))
+    seg_std  = seg.get("std_price", 0)
     seg_median_price = seg.get("median_price", seg_mean)
+    seg_mean_km = seg.get("mean_km", global_stats.get("mean_km", 100000))
+    seg_mean_yas = seg.get("mean_yas", global_stats.get("mean_yas", 10))
+    seg_count = seg.get("count", 1)
 
     if seg_std > 0:
         r["seg_fiyat_zscore"] = float(np.clip((liste-seg_mean)/seg_std, -4, 4))
@@ -450,11 +456,12 @@ def add_market_and_interaction_features(row_df, user_input, tahmini_fiyat,
         r["seg_fiyat_zscore"] = 0.0
 
     r["seg_fiyat_oran"] = float(np.clip(liste/max(seg_median_price,1), 0.3, 3.0))
-    r["seg_km_oran"]    = float(np.clip(r["kilometre"]/max(seg["mean_km"],1), 0, 5))
-    r["seg_yas_fark"]    = r["arac_yasi"] - seg["mean_yas"]
-    r["seg_rekabet_log"] = float(np.log1p(seg["count"]))
+    r["seg_km_oran"]    = float(np.clip(r["kilometre"]/max(seg_mean_km,1), 0, 5))
+    r["seg_yas_fark"]    = r["arac_yasi"] - seg_mean_yas
+    r["seg_rekabet_log"] = float(np.log1p(seg_count))
     r["fiyat_avantaj_skoru"] = (1-r["seg_fiyat_oran"])*0.6 + (1-min(r["seg_km_oran"],2)/2)*0.4
 
+    # Şehir ve marka popülerliği için de güvenli erişim
     il_count    = encoders.get("il_pazar_buyuklugu", {}).get(user_input.get("il"), 0)
     marka_count = encoders.get("marka_populerlik", {}).get(user_input["marka"], 0)
     r["il_pazar_buyuklugu"] = float(np.log1p(il_count))
@@ -604,7 +611,7 @@ def run_pipeline(user_input):
     m3_final_label = m3_classes[m3_pred_idx]
     m3_olasiliklar = {m3_classes[i]: float(m3_proba[i]) for i in range(len(m3_classes))}
 
-    # 2. KRİTİK FİLTRE: Hasar ve Fiyat Analizi (Mühendislik Katmanı)
+    # 2. KRİTİK FİLTRE: Hasar ve Fiyat Analizi (Mühendislik Katmanı)s
     # base_row içinden gerçek değerleri çekelim
     toplam_degisen = int(base_row.iloc[0]["degismis_sayi"])
     hasar_skoru = float(base_row.iloc[0]["parca_risk_toplam"])
