@@ -583,15 +583,17 @@ def run_pipeline(user_input):
     # ══════════════════════════════════════════════════════
     # Model 3: Yapay Zeka Kararı + Mantık Filtresi
     # ══════════════════════════════════════════════════════
+    # ══════════════════════════════════════════════════════
+    # Model 3: Yapay Zeka Kararı + Mantık Filtresi (GÜVENLİ SÜRÜM)
+    # ══════════════════════════════════════════════════════
     m3_features = get_feature_list(model3_meta, model3)
     X3 = enriched.reindex(columns=m3_features, fill_value=0)
 
-    # 1. Ham Yapay Zeka Tahminini Al (Model Devre Dışı Değil!)
+    # 1. Ham Yapay Zeka Tahmini
     m3_proba = model3.predict_proba(X3)[0]
     m3_pred_idx = int(np.argmax(m3_proba))
     m3_classes_raw = list(model3.classes_)
 
-    # Sınıf isimlerini çözümleme
     label_map = model3_meta.get("firsat_class_map", {})
     inverse_map = {v: k for k, v in label_map.items()}
     label_list = model3_meta.get("firsat_labels", [])
@@ -600,32 +602,31 @@ def run_pipeline(user_input):
         return str(c)
     m3_classes = [resolve(c) for c in m3_classes_raw]
     
-    # Modelin ham kararı
     m3_final_label = m3_classes[m3_pred_idx]
     m3_olasiliklar = {m3_classes[i]: float(m3_proba[i]) for i in range(len(m3_classes))}
 
-    # 2. KRİTİK FİLTRE: Hasar ve Fiyat Analizi (Mühendislik Katmanı)s
-    # base_row içinden gerçek değerleri çekelim
+    # ⭐ ÇÖKME ENGELLEYİCİ: m3_note değişkenine HER HALÜKARDA bir değer ata
+    if float(np.max(m3_proba)) < 0.55:
+        m3_note = f"Model kararı düşük güven seviyesinde (%{float(np.max(m3_proba))*100:.1f})."
+    else:
+        m3_note = ""
+
+    # 2. KRİTİK FİLTRE: Hasar ve Fiyat Analizi (Mühendislik Katmanı)
     toplam_degisen = int(base_row.iloc[0]["degismis_sayi"])
-    hasar_skoru = float(base_row.iloc[0]["parca_risk_toplam"])
-    
-    # Kaput, Tavan veya Bagaj gibi kritik parçalar değişmiş mi?
     kritik_parca_hasari = False
     for p in ["kaput", "tavan", "bagaj_kapagi"]:
         if user_input["parca_durumlari"].get(p) in ["degismis", "boyali"]:
             kritik_parca_hasari = True
 
-    # EĞER: Fiyat farkı makulse (%-12 ile %+12 arası) 
-    # VE ciddi bir hasar (kritik parça veya 2+ parça değişimi) yoksa:
+    # Sadece plastik aksamda hasar varsa ve fiyat normalse yumuşat
     if abs(fark_pct) <= 12 and (not kritik_parca_hasari) and (toplam_degisen < 2):
-        # Yapay zekanın "Tuzak" veya "Riskli" demesine rağmen biz piyasa gerçeğini uyguluyoruz
         if m3_final_label in ["Tuzak", "Riskli"]:
             m3_final_label = "Normal"
             m3_note = "Model risk sinyali yakaladı ancak hasar sadece plastik aksam/minör seviyede olduğu için araç 'Piyasa Uyumlu' görüldü."
-    else:
-        m3_note = "" if float(np.max(m3_proba)) > 0.55 else "Model tahmini düşük güven seviyesinde."
+        else:
+            # Model zaten olumlu bir şey (Premium/Altın Fırsat) dediyse onu bozmayalım
+            pass 
 
-   # run_pipeline fonksiyonunun en sonundaki return bloğu böyle olmalı:
     return {
         "model1": {
             "tahmini_piyasa_fiyati": tahmini_fiyat,
