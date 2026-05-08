@@ -558,6 +558,14 @@ def run_pipeline(user_input):
     # Hasarlı tahmin, orijinal referansın üstüne çıkamaz.
     # Ayrıca hasar cezası uygulanmış üst sınırı aşamaz.
     tahmini_fiyat = min(raw_tahmini_fiyat, damage_adjusted_cap)
+    # Eğer bir araç piyasa değerinden %40'tan daha pahalıysa, 
+    # Egea bile olsa hızlı satılamaz. Yapay zekayı ez.
+    if fark_pct > 40.0:
+        m2_pred = 1 # Yavaş sınıfına zorla
+        enriched["tahmin_hizli_olasiligi"] = 0.10
+        enriched["tahmin_yavas_olasiligi"] = 0.90
+        m2_proba = [0.10, 0.90]
+        # speed_labels[1] "Yavas" olacaktır.
 
     # Güvenlik
     tahmini_fiyat = max(tahmini_fiyat, 50_000)
