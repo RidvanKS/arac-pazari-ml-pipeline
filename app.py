@@ -560,27 +560,42 @@ def run_pipeline(user_input):
     tahmini_fiyat = min(raw_tahmini_fiyat, damage_adjusted_cap)
     # Eğer bir araç piyasa değerinden %40'tan daha pahalıysa, 
     # Egea bile olsa hızlı satılamaz. Yapay zekayı ez.
-    if fark_pct > 40.0:
-        m2_pred = 1 # Yavaş sınıfına zorla
-        enriched["tahmin_hizli_olasiligi"] = 0.10
-        enriched["tahmin_yavas_olasiligi"] = 0.90
-        m2_proba = [0.10, 0.90]
-        # speed_labels[1] "Yavas" olacaktır.
 
-    # Güvenlik
+
+        # Güvenlik
     tahmini_fiyat = max(tahmini_fiyat, 50_000)
+
     liste_raw = user_input.get("liste_fiyati")
     liste = liste_raw if liste_raw is not None else tahmini_fiyat
-    fark_pct = ((liste-tahmini_fiyat)/tahmini_fiyat)*100
+
+    fark_pct = ((liste - tahmini_fiyat) / tahmini_fiyat) * 100
 
     enriched = add_market_and_interaction_features(
-        base_row, user_input, tahmini_fiyat, encoders, segment_lookup, global_stats)
+        base_row,
+        user_input,
+        tahmini_fiyat,
+        encoders,
+        segment_lookup,
+        global_stats
+    )
 
+    # Model 2: Satış hızı tahmini
     m2_features = get_feature_list(model2_meta, model2)
     X2 = enriched.reindex(columns=m2_features, fill_value=0)
+
     m2_proba = model2.predict_proba(X2)[0]
-    m2_pred  = int(np.argmax(m2_proba))
-    speed_labels = model2_meta.get("speed_labels", ["Hizli","Yavas"])
+    m2_pred = int(np.argmax(m2_proba))
+
+    speed_labels = model2_meta.get("speed_labels", ["Hizli", "Yavas"])
+
+    # Eğer araç piyasa değerinden %40'tan daha pahalıysa hızlı satılamaz
+    if fark_pct > 40.0:
+        if "Yavas" in speed_labels:
+            m2_pred = speed_labels.index("Yavas")
+        else:
+            m2_pred = 1
+
+        m2_proba = np.array([0.10, 0.90])
 
     enriched["tahmin_hizli_olasiligi"] = float(m2_proba[0])
     enriched["tahmin_yavas_olasiligi"] = float(m2_proba[1])
