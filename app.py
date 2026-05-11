@@ -1287,7 +1287,11 @@ if st.session_state.result is not None:
         st.markdown(f"🐢 **Yavaş satış**: {p_yavas:.1%}")
         st.progress(p_yavas)
 
-    # ───── Model 3: Fırsat Kategorisi ─────
+        # ───── Model 3: Fırsat Kategorisi ─────
+    if result.get("model3") is None:
+        st.info("📌 Liste fiyatı girilmediği için fırsat / tuzak analizi yapılmadı. Sadece tahmini piyasa değeri ve satış hızı gösterildi.")
+        st.stop()
+
     m3 = result["model3"]
     firsat = m3["firsat_kategorisi"]
     firsat_olasiliklar = m3["olasiliklar"]
