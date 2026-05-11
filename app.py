@@ -563,12 +563,50 @@ def run_pipeline(user_input):
 
 
         # Güvenlik
+    t    # Güvenlik
     tahmini_fiyat = max(tahmini_fiyat, 50_000)
 
     liste_raw = user_input.get("liste_fiyati")
-    liste = liste_raw if liste_raw is not None else tahmini_fiyat
+    liste_var = liste_raw is not None
+    liste = liste_raw if liste_var else tahmini_fiyat
 
-    fark_pct = ((liste - tahmini_fiyat) / tahmini_fiyat) * 100
+    if liste_var:
+        fark_pct = ((liste - tahmini_fiyat) / tahmini_fiyat) * 100
+    else:
+        fark_pct = None
+
+    enriched = add_market_and_interaction_features(
+        base_row,
+        user_input,
+        tahmini_fiyat,
+        encoders,
+        segment_lookup,
+        global_stats
+    )
+
+    # Model 2: Satış hızı tahmini
+    m2_features = get_feature_list(model2_meta, model2)
+    X2 = enriched.reindex(columns=m2_features, fill_value=0)
+
+    m2_proba = model2.predict_proba(X2)[0]
+    m2_pred = int(np.argmax(m2_proba))
+
+    speed_labels = model2_meta.get("speed_labels", ["Hizli", "Yavas"])
+
+    idx_hizli = speed_labels.index("Hizli") if "Hizli" in speed_labels else 0
+    idx_yavas = speed_labels.index("Yavas") if "Yavas" in speed_labels else 1
+
+    # Liste fiyatı girilmişse ve araç piyasa değerinden %40+ pahalıysa hızlı satılamaz
+    if liste_var and fark_pct > 40.0:
+        m2_pred = idx_yavas
+
+        m2_proba_fixed = np.zeros_like(m2_proba, dtype=float)
+        m2_proba_fixed[idx_hizli] = 0.10
+        m2_proba_fixed[idx_yavas] = 0.90
+        m2_proba = m2_proba_fixed
+
+    enriched["tahmin_hizli_olasiligi"] = float(m2_proba[idx_hizli])
+    enriched["tahmin_yavas_olasiligi"] = float(m2_proba[idx_yavas])
 
     enriched = add_market_and_interaction_features(
         base_row,
@@ -609,6 +647,7 @@ def run_pipeline(user_input):
     # ══════════════════════════════════════════════════════
     # Model 3: Yapay Zeka Kararı + Mantık Filtresi (GÜVENLİ SÜRÜM)
     # ══════════════════════════════════════════════════════
+    
     m3_features = get_feature_list(model3_meta, model3)
     X3 = enriched.reindex(columns=m3_features, fill_value=0)
 
