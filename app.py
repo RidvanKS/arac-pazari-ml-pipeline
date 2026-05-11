@@ -563,7 +563,7 @@ def run_pipeline(user_input):
 
 
         # Güvenlik
-    t    # Güvenlik
+        # Güvenlik
     tahmini_fiyat = max(tahmini_fiyat, 50_000)
 
     liste_raw = user_input.get("liste_fiyati")
