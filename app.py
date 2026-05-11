@@ -563,7 +563,7 @@ def run_pipeline(user_input):
 
 
         # Güvenlik
-        # Güvenlik
+           # Güvenlik
     tahmini_fiyat = max(tahmini_fiyat, 50_000)
 
     liste_raw = user_input.get("liste_fiyati")
@@ -608,36 +608,26 @@ def run_pipeline(user_input):
     enriched["tahmin_hizli_olasiligi"] = float(m2_proba[idx_hizli])
     enriched["tahmin_yavas_olasiligi"] = float(m2_proba[idx_yavas])
 
-    enriched = add_market_and_interaction_features(
-        base_row,
-        user_input,
-        tahmini_fiyat,
-        encoders,
-        segment_lookup,
-        global_stats
-    )
-
-    # Model 2: Satış hızı tahmini
-    m2_features = get_feature_list(model2_meta, model2)
-    X2 = enriched.reindex(columns=m2_features, fill_value=0)
-
-    m2_proba = model2.predict_proba(X2)[0]
-    m2_pred = int(np.argmax(m2_proba))
-
-    speed_labels = model2_meta.get("speed_labels", ["Hizli", "Yavas"])
-
-    # Eğer araç piyasa değerinden %40'tan daha pahalıysa hızlı satılamaz
-    if fark_pct > 40.0:
-        if "Yavas" in speed_labels:
-            m2_pred = speed_labels.index("Yavas")
-        else:
-            m2_pred = 1
-
-        m2_proba = np.array([0.10, 0.90])
-
-    enriched["tahmin_hizli_olasiligi"] = float(m2_proba[0])
-    enriched["tahmin_yavas_olasiligi"] = float(m2_proba[1])
-# ══════════════════════════════════════════════════════
+    # Liste fiyatı girilmediyse Model 3 / fırsat analizi çalıştırma
+    if not liste_var:
+        return {
+            "model1": {
+                "tahmini_piyasa_fiyati": tahmini_fiyat,
+                "liste_fiyati": None,
+                "fiyat_fark_pct": None,
+                "raw_tahmini_fiyat": raw_tahmini_fiyat,
+                "original_tahmini_fiyat": original_tahmini_fiyat,
+                "damage_penalty_pct": damage_penalty_pct,
+            },
+            "model2": {
+                "tahmin": speed_labels[m2_pred],
+                "olasilik_hizli": float(m2_proba[idx_hizli]),
+                "olasilik_yavas": float(m2_proba[idx_yavas]),
+            },
+            "model3": None,
+            "_X2": X2,
+            "_enriched": enriched,
+        }
     # Model 3 öncesi karar katmanı (HASAR KONTROLLÜ)
     # ══════════════════════════════════════════════════════
    # ✅ YENİ: KARAR TAMAMEN MODEL 3 (YAPAY ZEKA) TARAFINDAN VERİLİR
