@@ -5,7 +5,7 @@ numpy<2
 scikit-learn
 lightgbm
 xgboost
-shap
+shap>=0.46
 matplotlib
 pyarrow
 streamlit-js-eval
