@@ -46,7 +46,7 @@
         "parca_risk_max",
         "degismis_parca_var"
     ],
-    "best_model_name": "LightGBM_Optuna",
+    "best_model_name": "XGBoost",
     "task_type": "binary",
     "speed_labels": [
         "Hizli",
@@ -58,13 +58,13 @@
     },
     "num_classes": 2,
     "buffer_zone": {
-        "q_low": 9,
-        "q_high": 15
+        "q_low": 12,
+        "q_high": 19
     },
-    "test_accuracy": 0.6001538856116954,
-    "balanced_accuracy": 0.6012679149778994,
-    "precision": 0.5756412845889719,
-    "recall": 0.7370054305663305,
-    "f1": 0.6464050805171241,
-    "roc_auc": 0.6515622770526255
+    "test_accuracy": 0.5827737226277372,
+    "balanced_accuracy": 0.5827262199725429,
+    "precision": 0.5840312033956636,
+    "recall": 0.5912891986062718,
+    "f1": 0.5876377907312287,
+    "roc_auc": 0.6206941429451205
 }

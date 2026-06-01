@@ -39,10 +39,10 @@
         "parca_risk_ortalama"
     ],
     "best_model_name": "LightGBM_Tuned",
-    "test_r2": 0.9802558309673348,
-    "test_mae": 59921.569048548954,
-    "test_rmse": 110171.10942871991,
-    "test_mape": 6.279524245501718,
+    "test_r2": 0.9856470727912084,
+    "test_mae": 62378.15720196264,
+    "test_rmse": 105844.42799544138,
+    "test_mape": 5.62469825922312,
     "part_features_used": [
         "kaput_risk",
         "tavan_risk",
@@ -67,5 +67,5 @@
         "degismis": 4,
         "belirtilmemis": 1
     },
-    "run_lazy": false
+    "run_lazy": true
 }

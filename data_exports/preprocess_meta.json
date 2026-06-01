@@ -36,11 +36,11 @@
         "il"
     ],
     "guven_esik": 70,
-    "ham_satilmis_kayit": 142142,
-    "aktif_ilan_kayit": 180031,
-    "processed_kayit": 141311,
-    "guvenli_kayit": 68778,
-    "final_clean_kayit": 61388,
+    "ham_satilmis_kayit": 293880,
+    "aktif_ilan_kayit": 199503,
+    "processed_kayit": 292055,
+    "guvenli_kayit": 132261,
+    "final_clean_kayit": 132261,
     "excluded_segments": [
         "SUV",
         "Pick-up",

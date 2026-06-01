@@ -1,4 +1,13 @@
 {
+    "selection_policy": {
+        "max_acceptable_overfit_gap": 0.12,
+        "min_acceptable_f1_macro": 0.55,
+        "selection_reason": "Overfit_Gap <= 0.12 ve F1_Macro >= 0.55 şartlarını sağlayan modeller arasından en yüksek cezalı Composite seçildi."
+    },
+    "overfit_gap": 0.04144385026737962,
+    "composite_raw": 0.7462408500740267,
+    "overfit_penalty": 0.024866310160427774,
+    "composite_final": 0.721374539913599,
     "model3_features": [
         "liste_fiyati",
         "tahmini_piyasa_fiyati",
@@ -69,11 +78,11 @@
         "hizli_esik_gun": 7,
         "yavas_esik_gun": 18
     },
-    "test_accuracy": 0.684,
-    "balanced_accuracy": 0.6587321669558512,
-    "precision_macro": 0.663211438635521,
-    "recall_macro": 0.6587321669558512,
-    "f1_macro": 0.6568263211749128,
-    "f1_weighted": 0.6825612753443739,
-    "roc_auc_ovr": 0.9037401494537842
+    "test_accuracy": 0.7040998217468806,
+    "balanced_accuracy": 0.6984669993707973,
+    "precision_macro": 0.668713823318821,
+    "recall_macro": 0.6984669993707973,
+    "f1_macro": 0.6713417390159662,
+    "f1_weighted": 0.7158904035603687,
+    "roc_auc_ovr": 0.9307096898010114
 }
