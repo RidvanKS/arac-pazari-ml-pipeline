@@ -677,13 +677,7 @@ def run_pipeline(user_input):
     if abs(fark_pct) <= 12 and (not kritik_parca_hasari) and (toplam_degisen < 2):
         if m3_final_label in ["Tuzak", "Riskli"]:
             m3_final_label = "Normal"
-        if abs(fark_pct) <= 12 and (not kritik_parca_hasari) and (toplam_degisen < 2):
-            if m3_final_label in ["Tuzak", "Riskli"]:
-                m3_final_label = "Normal"
-                m3_note = "Model risk sinyali yakaladı ancak hasar sadece plastik aksam/minör seviyede olduğu için araç 'Piyasa Uyumlu' görüldü."
-                m3_olasiliklar = {"Normal": 1.0}   # ⭐ TEK EKLENEN SATIR — UI çelişkisini önler
-            else:
-                pass
+            m3_olasiliklar = {"Normal": 1.0}
             m3_note = "Model risk sinyali yakaladı ancak hasar sadece plastik aksam/minör seviyede olduğu için araç 'Piyasa Uyumlu' görüldü."
         else:
             pass
