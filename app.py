@@ -13,7 +13,6 @@ from datetime import datetime
 from pathlib import Path
 import streamlit.components.v1 as components
 from streamlit_js_eval import streamlit_js_eval
-import traceback
 # ════════════════════════════════════════════════════════════════
 # SAYFA AYARLARI
 # ════════════════════════════════════════════════════════════════
@@ -658,15 +657,10 @@ def run_pipeline(user_input):
         m3_note = ""
 
     # ══════════════════════════════════════════════════════════════
-# KARAR KATMANI — Çok-Sinyalli Hibrit Mantık
-# ══════════════════════════════════════════════════════════════
+    # KARAR KATMANI — Yumuşatma Yaması (UI Çelişkisi Düzeltildi)
+    # ══════════════════════════════════════════════════════════════
 
-# ══════════════════════════════════════════════════════════════
-# KARAR KATMANI — Çok-Sinyalli Hibrit Mantık (Güvenli Sürüm)
-# ══════════════════════════════════════════════════════════════
-
-
-   # 2. KRİTİK FİLTRE: Hasar ve Fiyat Analizi (Mühendislik Katmanı)
+    # 2. KRİTİK FİLTRE: Hasar ve Fiyat Analizi (Mühendislik Katmanı)
     toplam_degisen = int(base_row.iloc[0]["degismis_sayi"])
     kritik_parca_hasari = False
     for p in ["kaput", "tavan", "bagaj_kapagi"]:
@@ -677,10 +671,36 @@ def run_pipeline(user_input):
     if abs(fark_pct) <= 12 and (not kritik_parca_hasari) and (toplam_degisen < 2):
         if m3_final_label in ["Tuzak", "Riskli"]:
             m3_final_label = "Normal"
-            m3_olasiliklar = {"Normal": 1.0}
+            m3_olasiliklar = {"Normal": 1.0}   # ⭐ UI çelişkisini önler
             m3_note = "Model risk sinyali yakaladı ancak hasar sadece plastik aksam/minör seviyede olduğu için araç 'Piyasa Uyumlu' görüldü."
         else:
+            # Model zaten olumlu bir şey (Premium/Altın Fırsat) dediyse onu bozmayalım
             pass
+
+    return {
+        "model1": {
+            "tahmini_piyasa_fiyati": tahmini_fiyat,
+            "liste_fiyati": liste_raw,
+            "fiyat_fark_pct": fark_pct,
+            "raw_tahmini_fiyat": raw_tahmini_fiyat,
+            "original_tahmini_fiyat": original_tahmini_fiyat,
+            "damage_penalty_pct": damage_penalty_pct,
+        },
+        "model2": {
+            "tahmin": speed_labels[m2_pred],
+            "olasilik_hizli": float(m2_proba[0]),
+            "olasilik_yavas": float(m2_proba[1]),
+        },
+        "model3": {
+            "firsat_kategorisi": m3_final_label,
+            "olasiliklar": m3_olasiliklar,
+            "not": m3_note,
+        },
+        "_X2": X2,
+        "_enriched": enriched,
+    }
+
+
 # ════════════════════════════════════════════════════════════════
 # ARABA SVG (DİNAMİK RENKLİ)
 # ════════════════════════════════════════════════════════════════
