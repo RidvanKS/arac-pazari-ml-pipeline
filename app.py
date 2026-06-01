@@ -13,7 +13,7 @@ from datetime import datetime
 from pathlib import Path
 import streamlit.components.v1 as components
 from streamlit_js_eval import streamlit_js_eval
-
+import traceback
 # ════════════════════════════════════════════════════════════════
 # SAYFA AYARLARI
 # ════════════════════════════════════════════════════════════════
@@ -661,106 +661,101 @@ def run_pipeline(user_input):
 # KARAR KATMANI — Çok-Sinyalli Hibrit Mantık
 # ══════════════════════════════════════════════════════════════
 
-# Ham model çıktısı
-    ham_etiket = m3_final_label
-    ham_guven  = float(np.max(m3_proba))
+# ══════════════════════════════════════════════════════════════
+# KARAR KATMANI — Çok-Sinyalli Hibrit Mantık (Güvenli Sürüm)
+# ══════════════════════════════════════════════════════════════
 
-    # Sinyaller
-    fiyat_sapma_abs   = abs(fark_pct)
-    hizli_satis_prob  = float(m2_proba[idx_hizli])
-    yavas_satis_prob  = float(m2_proba[idx_yavas])
 
-    # Enriched'tan domain sinyalleri (varsa)
-    seg_rekabet = float(enriched["seg_rekabet_log"].iloc[0]) if "seg_rekabet_log" in enriched else 0
-    hasar_yog   = float(enriched["hasar_yogunlugu"].iloc[0]) if "hasar_yogunlugu" in enriched else 0
-    arac_yasi   = float(enriched["arac_yasi"].iloc[0]) if "arac_yasi" in enriched else 0
+    try:
+        # Ham model çıktısı
+        ham_etiket = m3_final_label
+        ham_guven  = float(np.max(m3_proba))
 
-    # Yapısal kontroller
-    toplam_degisen = int(base_row.iloc[0]["degismis_sayi"])
-    kritik_parca_hasari = any(
-        user_input["parca_durumlari"].get(p) in ["degismis", "boyali"]
-        for p in ["kaput", "tavan", "bagaj_kapagi"]
-    )
+        # Sinyaller
+        fiyat_sapma_abs   = abs(fark_pct)
+        hizli_satis_prob  = float(m2_proba[idx_hizli])
+        yavas_satis_prob  = float(m2_proba[idx_yavas])
 
-    # Karar mantığı
-    override_uygulandi = False
-    override_sebep = ""
+        # Domain sinyalleri — enriched DataFrame'inden güvenli okuma
+        def safe_get(df, col, default=0.0):
+            if col in df.columns:
+                try:
+                    return float(df[col].iloc[0])
+                except Exception:
+                    return default
+            return default
 
-    # Kural 1: Net Normal sinyali (fiyat makul + hızlı satış + temiz)
-    if (fiyat_sapma_abs <= 12 
-        and hizli_satis_prob >= 0.60 
-        and not kritik_parca_hasari 
-        and toplam_degisen < 2):
-        if ham_etiket in ["Tuzak", "Riskli"]:
+        seg_rekabet = safe_get(enriched, "seg_rekabet_log")
+        hasar_yog   = safe_get(enriched, "hasar_yogunlugu")
+        arac_yasi_v = safe_get(enriched, "arac_yasi")
+
+        # Yapısal kontroller
+        toplam_degisen = int(base_row.iloc[0]["degismis_sayi"])
+        kritik_parca_hasari = any(
+            user_input["parca_durumlari"].get(p) in ["degismis", "boyali"]
+            for p in ["kaput", "tavan", "bagaj_kapagi"]
+        )
+
+        # Karar mantığı
+        override_uygulandi = False
+        override_sebep = ""
+
+        # Kural 1: Net Normal sinyali
+        if (fiyat_sapma_abs <= 12
+            and hizli_satis_prob >= 0.60
+            and not kritik_parca_hasari
+            and toplam_degisen < 2):
+            if ham_etiket in ["Tuzak", "Riskli"]:
+                m3_final_label = "Normal"
+                m3_olasiliklar = {"Normal": round(hizli_satis_prob, 3),
+                                ham_etiket: round(1 - hizli_satis_prob, 3)}
+                override_uygulandi = True
+                override_sebep = (
+                    f"Model {ham_etiket} sinyali verdi (%{ham_guven*100:.1f}), ancak "
+                    f"Model 2 bu aracın %{hizli_satis_prob*100:.0f} olasılıkla hızlı "
+                    f"satılacağını öngörüyor ve fiyat sapması düşük (%{fark_pct:.1f}). "
+                    f"Gerçek Tuzak/Riskli araçlar yavaş satılır → 'Piyasa Uyumlu'."
+                )
+
+        # Kural 2: Şüpheli ama tam emin değil
+        elif (fiyat_sapma_abs <= 15
+            and hizli_satis_prob >= 0.50
+            and ham_etiket in ["Tuzak", "Riskli"]
+            and ham_guven < 0.70
+            and not kritik_parca_hasari):
             m3_final_label = "Normal"
-            m3_olasiliklar = {"Normal": round(hizli_satis_prob, 3),
-                            ham_etiket: round(1 - hizli_satis_prob, 3)}
+            m3_olasiliklar = {"Normal": 0.55, ham_etiket: 0.45}
             override_uygulandi = True
             override_sebep = (
-                f"Model {ham_etiket} sinyali verdi (%{ham_guven*100:.1f}), ancak "
-                f"Model 2 bu aracın %{hizli_satis_prob*100:.0f} olasılıkla hızlı "
-                f"satılacağını öngörüyor ve fiyat sapması düşük (%{fark_pct:.1f}). "
-                f"Gerçek Tuzak/Riskli araçlar yavaş satılır → 'Piyasa Uyumlu'."
+                f"Model düşük güvenle {ham_etiket} dedi (%{ham_guven*100:.1f}); "
+                f"Model 2 ise hızlı satışa eğilimli (%{hizli_satis_prob*100:.0f}). "
+                f"Belirsizlik durumunda 'Piyasa Uyumlu' kararı verildi."
             )
 
-    # Kural 2: Şüpheli ama tam emin değil (orta güven, hızlı satış sinyali)
-    elif (fiyat_sapma_abs <= 15
-        and hizli_satis_prob >= 0.50
-        and ham_etiket in ["Tuzak", "Riskli"]
-        and ham_guven < 0.70
-        and not kritik_parca_hasari):
-        m3_final_label = "Normal"
-        m3_olasiliklar = {"Normal": 0.55, ham_etiket: 0.45}
-        override_uygulandi = True
-        override_sebep = (
-            f"Model düşük güvenle {ham_etiket} dedi (%{ham_guven*100:.1f}); "
-            f"Model 2 ise hızlı satışa eğilimli (%{hizli_satis_prob*100:.0f}). "
-            f"Belirsizlik durumunda 'Piyasa Uyumlu' kararı verildi."
-        )
+        # Kural 3: Ters yön — model olumlu dese bile gerçek hasar varsa Riskli'ye çek
+        elif (kritik_parca_hasari
+            and toplam_degisen >= 3
+            and ham_etiket not in ["Tuzak", "Riskli"]):
+            m3_final_label = "Riskli"
+            m3_olasiliklar = {"Riskli": 0.80, ham_etiket: 0.20}
+            override_uygulandi = True
+            override_sebep = (
+                f"Model {ham_etiket} dedi ancak kritik parça hasarı + "
+                f"{toplam_degisen} değişen parça → manuel olarak Riskli'ye çekildi."
+            )
 
-    # Kural 3: TERS YÖN — Model "Normal/Premium" dese bile gerçek risk varsa Tuzak'a/Riskli'ye çek
-    elif (kritik_parca_hasari 
-        and toplam_degisen >= 5
-        and ham_etiket not in ["Tuzak", "Riskli"]):
-        m3_final_label = "Riskli"
-        m3_olasiliklar = {"Riskli": 0.80, ham_etiket: 0.20}
-        override_uygulandi = True
-        override_sebep = (
-            f"Model {ham_etiket} dedi ancak kritik parça hasarı + "
-            f"{toplam_degisen} değişen parça → manuel olarak Riskli'ye çekildi."
-        )
+        if override_uygulandi:
+            m3_note = override_sebep
+        elif ham_guven < 0.55:
+            m3_note = f"Model kararı düşük güven seviyesinde (%{ham_guven*100:.1f})."
+        else:
+            m3_note = ""
 
-    if override_uygulandi:
-        m3_note = override_sebep
-    elif ham_guven < 0.55:
-        m3_note = f"Model kararı düşük güven seviyesinde (%{ham_guven*100:.1f})."
-    else:
-        m3_note = ""
-
-        return {
-            "model1": {
-                "tahmini_piyasa_fiyati": tahmini_fiyat,
-                "liste_fiyati": liste_raw,
-                "fiyat_fark_pct": fark_pct,
-                "raw_tahmini_fiyat": raw_tahmini_fiyat,
-                "original_tahmini_fiyat": original_tahmini_fiyat,
-                "damage_penalty_pct": damage_penalty_pct,
-            },
-            "model2": {
-                "tahmin": speed_labels[m2_pred],
-                "olasilik_hizli": float(m2_proba[0]),
-                "olasilik_yavas": float(m2_proba[1]),
-            },
-            "model3": {
-                "firsat_kategorisi": m3_final_label,
-                "olasiliklar": m3_olasiliklar,
-                "not": m3_note,
-            },
-            "_X2": X2,
-            "_enriched": enriched,
-        }
-
-
+    except Exception as e:
+        # Hata olursa kullanıcıya göster, ham model kararıyla devam et
+        st.error(f"⚠️ Karar katmanı hatası: {e}")
+        st.code(traceback.format_exc())
+        m3_note = f"Karar katmanı çalışamadı, model ham çıktısı kullanıldı."
 # ════════════════════════════════════════════════════════════════
 # ARABA SVG (DİNAMİK RENKLİ)
 # ════════════════════════════════════════════════════════════════
