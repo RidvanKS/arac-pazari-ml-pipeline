@@ -463,7 +463,7 @@ def add_market_and_interaction_features(row_df, user_input, tahmini_fiyat,
 
     return pd.DataFrame([r])
 
-def calculate_damage_penalty_pct(parca_durumlari, tramer_tutari=0):
+def calculate_damage_penalty_pct(parca_durumlari, tramer_tutari=0,arac_yasi=0):
     """
     Hasar durumuna göre iş kuralı bazlı fiyat cezası üretir.
     Amaç: Hasarlı/boyalı parça fiyatı yapay olarak artırmasın.
@@ -475,13 +475,13 @@ def calculate_damage_penalty_pct(parca_durumlari, tramer_tutari=0):
         "kaput": 1.8,
         "bagaj_kapagi": 1.4,
 
-        "on_tampon": 0.6,
-        "arka_tampon": 0.6,
+        "on_tampon": 0.4,
+        "arka_tampon": 0.4,
 
-        "sol_on_camurluk": 1.0,
-        "sag_on_camurluk": 1.0,
-        "sol_arka_camurluk": 1.2,
-        "sag_arka_camurluk": 1.2,
+        "sol_on_camurluk": 0.4,
+        "sag_on_camurluk": 0.4,
+        "sol_arka_camurluk": 0.6,
+        "sag_arka_camurluk": 0.6,
 
         "sol_on_kapi": 1.1,
         "sag_on_kapi": 1.1,
@@ -515,8 +515,14 @@ def calculate_damage_penalty_pct(parca_durumlari, tramer_tutari=0):
             penalty += 1.5
         else:
             penalty += 2.5
-
-    # Penalty yüzde olarak.
+    else:
+        # Tramer 0 ise yaş kontrolü yap (Gizli hasar/cepten yaptırma şüphesi)
+        if arac_yasi > 15:
+            penalty += 0.8  # 15 yaş üstü trameri olmayan araca ufak bir "şüphe" cezası
+        elif arac_yasi > 10:
+            penalty += 0.4  # 10-15 yaş arasına daha hafif bir ceza
+        # 10 yaşından küçüklerde tramer 0 ise gerçekten hatasızdır, ceza ekleme (penalty += 0)
+        # Penalty yüzde olarak.
     # Çok agresif olmasın diye üst sınır koyuyoruz.
     penalty_pct = min(penalty, 12.0)
 
@@ -539,10 +545,14 @@ def run_pipeline(user_input):
     X1_original = original_row.reindex(columns=m1_features, fill_value=0)
     original_tahmini_fiyat = float(model1.predict(X1_original)[0])
 
-    # 3) Hasar cezası hesapla
+   # 3) Hasar cezası hesapla
+    yil_simdi = datetime.now().year
+    hesaplanan_yas = max(0, yil_simdi - user_input["yil"])
+
     damage_penalty_pct = calculate_damage_penalty_pct(
         user_input.get("parca_durumlari", {}),
-        user_input.get("tramer_tutari", 0)
+        user_input.get("tramer_tutari", 0),
+        hesaplanan_yas
     )
 
     damage_adjusted_cap = original_tahmini_fiyat * (1 - damage_penalty_pct / 100)
