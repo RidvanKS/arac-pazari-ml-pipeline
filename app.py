@@ -346,15 +346,32 @@ extra_meta = bundle.get("extra_meta", {})
 
 
 # ─── SHAP explainer runtime'da yeniden oluştur ───
+import xgboost as xgb
+import tempfile, os, copy
+
 @st.cache_resource
 def build_explainers():
     expl = {}
     try:
-        expl["model2"] = shap.TreeExplainer(model2)
+        m2 = model2
+        # XGBoost 2.x serialize uyumsuzluğunu çözmek için booster'ı save/load döngüsünden geçir
+        try:
+            booster = m2.get_booster()
+            with tempfile.NamedTemporaryFile(suffix=".ubj", delete=False) as tf:
+                tmp_path = tf.name
+            booster.save_model(tmp_path)
+            fresh = xgb.Booster()
+            fresh.load_model(tmp_path)
+            os.unlink(tmp_path)
+
+            m2_fixed = copy.copy(m2)
+            m2_fixed._Booster = fresh
+            expl["model2"] = shap.TreeExplainer(m2_fixed)
+        except Exception:
+            expl["model2"] = shap.TreeExplainer(m2)  # son çare
     except Exception as e:
         st.warning(f"Model 2 explainer kurulamadı: {e}")
     return expl
-
 explainers = build_explainers()
 # ⭐⭐⭐ EKSİK OLAN BLOK BİTTİ ⭐⭐⭐
 
