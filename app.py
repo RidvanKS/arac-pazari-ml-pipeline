@@ -349,30 +349,7 @@ extra_meta = bundle.get("extra_meta", {})
 import xgboost as xgb
 import tempfile, os, copy
 
-@st.cache_resource
-def build_explainers():
-    expl = {}
-    try:
-        m2 = model2
-        # XGBoost 2.x serialize uyumsuzluğunu çözmek için booster'ı save/load döngüsünden geçir
-        try:
-            booster = m2.get_booster()
-            with tempfile.NamedTemporaryFile(suffix=".ubj", delete=False) as tf:
-                tmp_path = tf.name
-            booster.save_model(tmp_path)
-            fresh = xgb.Booster()
-            fresh.load_model(tmp_path)
-            os.unlink(tmp_path)
-
-            m2_fixed = copy.copy(m2)
-            m2_fixed._Booster = fresh
-            expl["model2"] = shap.TreeExplainer(m2_fixed)
-        except Exception:
-            expl["model2"] = shap.TreeExplainer(m2)  # son çare
-    except Exception as e:
-        st.warning(f"Model 2 explainer kurulamadı: {e}")
-    return expl
-explainers = build_explainers()
+explainers = {"model2": True}
 # ⭐⭐⭐ EKSİK OLAN BLOK BİTTİ ⭐⭐⭐
 
 # ════════════════════════════════════════════════════════════════
@@ -1399,22 +1376,24 @@ if st.session_state.result is not None:
     st.markdown('<div class="info-box">🧠 Aşağıdaki grafik, modelin bu kararı verirken hangi özellikleri ne kadar dikkate aldığını gösterir.</div>', unsafe_allow_html=True)
 
     try:
+    
+
         if "model2" in explainers:
             X2 = result["_X2"]
 
-        
-            explainer = explainers["model2"]
-            shap_values = explainer.shap_values(X2)
-            if isinstance(shap_values, list):
-                shap_use = shap_values[1]
-                base_val = explainer.expected_value[1] if isinstance(explainer.expected_value, list) else explainer.expected_value
-            else:
-                shap_use = shap_values
-                base_val = explainer.expected_value
+            # XGBoost'un kendi tree SHAP hesaplaması — shap paketine ihtiyaç yok
+            booster = model2.get_booster()
+            dmat = xgb.DMatrix(X2, feature_names=list(X2.columns))
+            contribs = booster.predict(dmat, pred_contribs=True)  # (n, n_features+1)
 
-            # Top 10 feature etkisi
-            shap_arr = np.array(shap_use[0]).flatten()
-            feat_imp = pd.Series(shap_arr, index=X2.columns).sort_values(key=lambda s: s.abs(), ascending=False).head(10)
+            shap_arr = contribs[0, :-1]   # son sütun bias/base value
+            base_val = contribs[0, -1]
+
+            feat_imp = (
+                pd.Series(shap_arr, index=X2.columns)
+                .sort_values(key=lambda s: s.abs(), ascending=False)
+                .head(10)
+            )
 
             fig, ax = plt.subplots(figsize=(9, 5))
             colors = ["#16a34a" if v < 0 else "#dc2626" for v in feat_imp.values]
