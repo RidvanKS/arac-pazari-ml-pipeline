@@ -682,7 +682,11 @@ def run_pipeline(user_input):
         if m3_final_label in ["Tuzak", "Riskli"]:
             m3_final_label = "Normal"
             m3_olasiliklar = {"Normal": 1.0}   # ⭐ UI çelişkisini önler
-            m3_note = "Model risk sinyali yakaladı ancak hasar sadece plastik aksam/minör seviyede olduğu için araç 'Piyasa Uyumlu' görüldü."
+            m3_note = ("Liste fiyatı, tahmini piyasa değerine yakın (±%12 aralığında). "
+                       "Kaput, tavan ve bagaj gibi kritik parçalarda ağır hasar bulunmuyor; "
+                       "toplam değişen parça sayısı da düşük seviyede. "
+                       "Model bir risk sinyali yakalamış olsa da fiyat–değer dengesi ve "
+                       "hasar profili makul olduğundan araç 'Piyasa Uyumlu' olarak değerlendirildi.")
         else:
             # Model zaten olumlu bir şey (Premium/Altın Fırsat) dediyse onu bozmayalım
             pass
@@ -1374,13 +1378,25 @@ if st.session_state.result is not None:
 
     if is_rule_based:
         st.markdown("**📊 Karar Gerekçesi**")
-        st.markdown(f"""
-        <div class="info-box" style="border-left-color:#dc2626;">
-            ℹ️ Bu sonuç <b>model tahmini değil</b>, girilen hasar ve kondisyon verilerine dayalı 
-            <b>doğrudan sistem uyarısıdır</b>.<br><br>
-            <b>Neden?</b> {result['model3'].get('not', 'Araç kondisyonundaki yüksek risk faktörleri nedeniyle bu kategori seçilmiştir.')}
-        </div>
-        """, unsafe_allow_html=True)
+
+        # Normal'e yumuşatma → bilgi tonu (kırmızı uyarı değil)
+        if firsat == "Normal":
+            st.markdown(f"""
+            <div class="info-box" style="border-left-color:#3b82f6;">
+                ℹ️ Bu karar, modelin ham tahmini üzerinde <b>iş kuralı katmanı</b> uygulanarak verildi.
+                Yapay zekânın bazı risk sinyallerini, fiyat ve hasar verileriyle birlikte değerlendirdik.<br><br>
+                <b>Gerekçe:</b> {result['model3'].get('not', 'Liste fiyatı piyasa değeriyle uyumlu ve araçta belirgin bir risk göstergesi bulunmuyor.')}
+            </div>
+            """, unsafe_allow_html=True)
+        # Gerçek risk kararı (Riskli / Tuzak vs.)
+        else:
+            st.markdown(f"""
+            <div class="info-box" style="border-left-color:#dc2626;">
+                ⚠️ Bu sonuç yalnızca model tahminine değil, aynı zamanda fiyat, hasar ve kondisyon
+                verilerini birleştiren <b>iş kuralı katmanına</b> dayanıyor.<br><br>
+                <b>Neden?</b> {result['model3'].get('not', 'Aracın kondisyon, fiyat veya hasar profilinde dikkat çekici bir durum tespit edildi.')}
+            </div>
+            """, unsafe_allow_html=True)
 
     else:
         st.markdown("**📊 Tüm Kategorilerin Olasılıkları**")
