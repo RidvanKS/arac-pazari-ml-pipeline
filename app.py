@@ -947,6 +947,7 @@ try {
     </html>
     """
     html = html.replace("__DURUMLAR__", durumlar_json)
+    html = html.replace("__VERSION__", version)   # ⭐ EKSİK OLAN SATIR — version'ı da replace etmemiz lazım
     return html
 
 # ════════════════════════════════════════════════════════════════
@@ -1171,33 +1172,42 @@ if analiz_btn:
     st.session_state.pending_analysis = True
     st.rerun()
 
-# 2. AŞAMA: Rerun sonrası — state taze, pipeline çalıştır
+# 2. AŞAMA: Rerun sonrası — JS sync'in dönmesini BEKLE, sonra pipeline çalıştır
 if st.session_state.get("pending_analysis", False):
-    st.session_state.pending_analysis = False  # flag'i kapat
+    # ⭐ KRİTİK: streamlit_js_eval ASENKRON
+    # İlk render'da sync_value = None döner. Pipeline'ı şimdi çalıştırırsak
+    # ESKİ state ile hesaplar. JS değer döndüğünde otomatik 2. rerun olur,
+    # o zaman sync_value dolu olur ve session_state taze olur.
+    if sync_value is None:
+        st.info("⏳ Parça durumları senkronize ediliyor, lütfen bekleyin...")
+        # st.stop() çağırma — streamlit_js_eval'in otomatik rerun tetiklemesine izin ver
+    else:
+        # JS cevap verdi → session_state.parca_durumlari güncel → pipeline çalıştır
+        st.session_state.pending_analysis = False  # flag'i kapat
 
-    user_input = {
-        "marka": marka, "seri": seri, "model": model_adi,
-        "yil": yil, "kilometre": km,
-        "il": il, "renk": renk,
-        "yakit_tipi": yakit, "vites_tipi": vites,
-        "kasa_tipi": kasa, "cekis": cekis, "kimden": kimden,
-        "motor_hacmi_num": motor_hacmi, "motor_gucu_num": motor_gucu,
-        "tramer_tutari": tramer,
-        "liste_fiyati": liste_fiyati,
-        "parca_durumlari": dict(st.session_state.parca_durumlari),  # ✅ TAZE STATE
-    }
+        user_input = {
+            "marka": marka, "seri": seri, "model": model_adi,
+            "yil": yil, "kilometre": km,
+            "il": il, "renk": renk,
+            "yakit_tipi": yakit, "vites_tipi": vites,
+            "kasa_tipi": kasa, "cekis": cekis, "kimden": kimden,
+            "motor_hacmi_num": motor_hacmi, "motor_gucu_num": motor_gucu,
+            "tramer_tutari": tramer,
+            "liste_fiyati": liste_fiyati,
+            "parca_durumlari": dict(st.session_state.parca_durumlari),  # ✅ TAZE STATE
+        }
 
-    with st.spinner("🤖 Yapay zekâ aracı analiz ediyor..."):
-        try:
-            st.session_state.result = run_pipeline(user_input)
-            
-            # Debug: state'in doğru gönderildiğini logla
-            hasarli_sayi = sum(1 for v in user_input["parca_durumlari"].values() 
-                                if v in ["boyali", "degismis", "lokal_boyali"])
-            st.success(f"✅ Analiz tamamlandı! ({hasarli_sayi} hasarlı parça hesaba katıldı)")
-        except Exception as e:
-            st.error(f"❌ Analiz hatası: {e}")
-            st.session_state.result = None
+        with st.spinner("🤖 Yapay zekâ aracı analiz ediyor..."):
+            try:
+                st.session_state.result = run_pipeline(user_input)
+
+                # Debug: state'in doğru gönderildiğini logla
+                hasarli_sayi = sum(1 for v in user_input["parca_durumlari"].values()
+                                    if v in ["boyali", "degismis", "lokal_boyali"])
+                st.success(f"✅ Analiz tamamlandı! ({hasarli_sayi} hasarlı parça hesaba katıldı)")
+            except Exception as e:
+                st.error(f"❌ Analiz hatası: {e}")
+                st.session_state.result = None
 
 # ════════════════════════════════════════════════════════════════
 # SONUÇLAR
