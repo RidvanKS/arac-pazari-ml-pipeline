@@ -4,7 +4,7 @@ Türk ikinci el otomobil pazarındaki **~500.000 ilan** üzerinde eğitilmiş, �
 
 > 🎓 Hitit Üniversitesi Bilgisayar Mühendisliği 
 
-🔗 **Canlı Demo:** [ridvan.streamlit.app](#)
+🔗 **Canlı Demo:** [https://ridvan.streamlit.app/](#)
 
 ---
 
