@@ -89,7 +89,7 @@ Proje boyunca karşılaşılan ve çözülen kritik problemler:
 ## 👤 Geliştirici
 
 **Rıdvan Koçak**
-Hitit Üniversitesi — Bilgisayar Mühendisliği
+Hitit Üniversitesi — Bilgisayar Mühendisliği - ML Projesi
 
 - 📧 kocak.ridvan@hotmail.com
 - 🐙 [github.com/RidvanKS](https://github.com/RidvanKS)
