@@ -323,7 +323,7 @@ def load_bundle():
 
 # ⭐⭐⭐ EKSİK OLAN BLOK — BURAYA EKLE ⭐⭐⭐
 bundle = load_bundle()
-df = load_df()
+
 
 model1 = bundle["model1"]
 model2 = bundle["model2"]
