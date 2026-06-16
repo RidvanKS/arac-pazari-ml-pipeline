@@ -318,9 +318,7 @@ def load_bundle():
     return joblib.load(bundle_path)
 
 
-@st.cache_data
-def load_df():
-    return pd.read_parquet("data_exports/df_model_clean.parquet")
+
 
 
 # ⭐⭐⭐ EKSİK OLAN BLOK — BURAYA EKLE ⭐⭐⭐
@@ -528,7 +526,7 @@ def calculate_damage_penalty_pct(parca_durumlari, tramer_tutari=0,arac_yasi=0):
 
     return penalty_pct
 def run_pipeline(user_input):
-    base_row = build_feature_row(user_input, encoders, df, damage_map)
+    base_row = build_feature_row(user_input, encoders, None, damage_map)
     m1_features = get_feature_list(model1_meta, model1)
 
     # 1) Kullanıcının girdiği hasar durumuyla ham tahmin
@@ -541,7 +539,7 @@ def run_pipeline(user_input):
         p: "orijinal" for p in PARCA_LABELS.keys()
     }
 
-    original_row = build_feature_row(original_input, encoders, df, damage_map)
+    original_row = build_feature_row(original_input, encoders, None, damage_map)
     X1_original = original_row.reindex(columns=m1_features, fill_value=0)
     original_tahmini_fiyat = float(model1.predict(X1_original)[0])
 
